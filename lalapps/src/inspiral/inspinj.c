@@ -112,6 +112,8 @@ REAL8 mean_time_step_sfr(REAL8 zmax, REAL8 rate_local);
 REAL8 drawRedshift(REAL8 zmin, REAL8 zmax, REAL8 pzmax);
 REAL8 redshift_mass(REAL8 mass, REAL8 z);
 
+REAL8 ComputePPEparameterFromLambdaG(REAL8 loglambdaG, REAL8 distance, REAL8 mchirp, REAL8 redshift);
+
 /*
  *  *************************************
  *  Defining of the used global variables
@@ -527,6 +529,19 @@ void adjust_snr_real8(
     }
   }
 }
+
+/*************************************************************
+ * Function to compute the value of betaPPE from distance
+ * Compton wavelength of the graviton, redshift (if available, 
+ * default=0) and chirp mass. All quantities should be in meters
+ *************************************************************/
+ 
+REAL8 ComputePPEparameterFromLambdaG(REAL8 wavelength, REAL8 distance, REAL8 mchirp, REAL8 z)
+{
+    REAL8 lambdaG=pow(10.0,wavelength);
+    return -LAL_PI*LAL_PI*distance*mchirp/(lambdaG*lambdaG*(1.0+z));
+}
+
 
 
 /*************************************************************
@@ -2741,46 +2756,6 @@ int main( int argc, char *argv[] )
                         "string", optarg );
         break;
 
-      case '1':
-        minSNR = atof( optarg );
-
-        if ( minSNR < 2 )
-        {
-          fprintf(stderr,"invalid argument to --%s:\n"
-                  "%s must be greater than 2\n",
-                  long_options[option_index].name, optarg );
-
-          exit( 1 );
-        }
-        this_proc_param = this_proc_param->next =
-          next_process_param( long_options[option_index].name,
-              "float", "%le", minSNR );
-
-        break;
-      case '2':
-        maxSNR = atof( optarg );
-        if ( maxSNR < 2 )
-        {
-          fprintf(stderr,"invalid argument to --%s:\n"
-                  "%s must be greater than 2\n",
-                  long_options[option_index].name, optarg );
-
-          exit( 1 );
-        }
-
-        this_proc_param = this_proc_param->next =
-          next_process_param( long_options[option_index].name,
-              "float", "%le", maxSNR );
-        break;
-      case '3':
-        optarg_len = strlen( optarg ) + 1;
-        ifos       = calloc( 1, optarg_len * sizeof(char) );
-        memcpy( ifos, optarg, optarg_len * sizeof(char) );
-        this_proc_param = this_proc_param->next =
-          next_process_param( long_options[option_index].name, "string",
-              "%s", optarg );
-        break;
-
       case '^':
         optarg_len = strlen( optarg ) + 1;
         IPNSkyPositionsFile = calloc( 1, optarg_len * sizeof(char) );
@@ -2789,7 +2764,7 @@ int main( int argc, char *argv[] )
           next_process_param( long_options[option_index].name, "string",
               "%s", optarg );
         break;
-      case '1009':
+      case 1009:
               /* enable PhiTest injections */
         this_proc_param = this_proc_param->next = 
         next_process_param( long_options[option_index].name, "string", 
@@ -3919,6 +3894,11 @@ int main( int argc, char *argv[] )
     /* populate the massive graviton parameter */
     
     simTable->loglambdaG=loglambdaG;
+    
+    /* compute the corresponding value of the betaPPE parameter */
+    
+    bPPE = -1.0;
+    betaPPE = ComputePPEparameterFromLambdaG(loglambdaG,simTable->distance*1e6*LAL_PC_SI,simTable->mchirp*LAL_MRSUN_SI,0.0);
     
     /* populate the Brans-Dicke parameters */
     

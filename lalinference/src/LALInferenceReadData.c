@@ -842,11 +842,16 @@ LALInferenceIFOData *LALInferenceReadData(ProcessParamsTable *commandLine)
                     char filename[nameLength];
                     FILE *out;
 
+                    double lines_width;
+                    ppt = LALInferenceGetProcParamVal(commandLine, "--chisquaredlinesWidth");
+                    if(ppt) lines_width = atoi(ppt->value);
+                    else lines_width = deltaF;
+
                     snprintf(filename, nameLength, "%s-ChiSquaredLines.dat", IFOdata[i].name);
                     out = fopen(filename, "w");
                     for (int k = 0; k < lengthF; ++k ) {
                         if (pvalues[k] < 0.05) {
-                            fprintf(out,"%g\n",((double) k) * deltaF);
+                            fprintf(out,"%g %g\n",((double) k) * deltaF,lines_width);
                         }
                     }
                     fclose(out);
@@ -876,11 +881,16 @@ LALInferenceIFOData *LALInferenceReadData(ProcessParamsTable *commandLine)
                     char filename[nameLength];
                     FILE *out;
 
+                    double lines_width;
+                    ppt = LALInferenceGetProcParamVal(commandLine, "--KSlinesWidth");
+                    if(ppt) lines_width = atoi(ppt->value);
+                    else lines_width = deltaF;
+
                     snprintf(filename, nameLength, "%s-KSLines.dat", IFOdata[i].name);
                     out = fopen(filename, "w");
                     for (int k = 0; k < lengthF; ++k ) {
                         if (pvalues[k] < 0.05) {
-                            fprintf(out,"%g\n",((double) k) * deltaF);
+                            fprintf(out,"%g %g\n",((double) k) * deltaF,lines_width);
                         }
                     }
                     fclose(out);
@@ -1195,7 +1205,7 @@ void LALInferenceInjectInspiralSignal(LALInferenceIFOData *IFOdata, ProcessParam
 	//LALGenerateInspiral(&status,&InjectGW,injTable,&InjParams);
 	//if(status.statusCode!=0) {fprintf(stderr,"Error generating injection!\n"); REPORTSTATUS(&status); }
 	/* Check for frequency domain injection (TF2 only at present) */
-	if(strstr(injTable->waveform,"TaylorF2")||strstr(injTable->waveform,"TaylorF2"))
+	if(strstr(injTable->waveform,"TaylorF2")||strstr(injTable->waveform,"PPE"))
 	{ fprintf(stdout,"Injecting TaylorF2 or TaylorF2Test in the frequency domain...\n");
 	 InjectTaylorF2(IFOdata, injTable, commandLine);
 	 return;
@@ -1336,16 +1346,15 @@ void LALInferenceInjectInspiralSignal(LALInferenceIFOData *IFOdata, ProcessParam
       if(LALInferenceGetProcParamVal(commandLine,"--inj-spinOrder")) {
         spinO = atoi(LALInferenceGetProcParamVal(commandLine,"--inj-spinOrder")->value);
         XLALSimInspiralSetSpinOrder(waveFlags, spinO);
-        fprintf(stdout,"Injection (twice) PN spin order set to %i\n",spinO);
       }
       LALSimInspiralTidalOrder tideO = -1;
       if(LALInferenceGetProcParamVal(commandLine,"--inj-tidalOrder")) {
         tideO = atoi(LALInferenceGetProcParamVal(commandLine,"--inj-tidalOrder")->value);
         XLALSimInspiralSetTidalOrder(waveFlags, tideO);
-        fprintf(stdout,"Injection (twice) PN tidal order set to %i\n",tideO);
       }
       LALSimInspiralTestGRParam *nonGRparams = NULL;
-      
+      /* Print a line with information about approximant, amporder, phaseorder, tide order and spin order */
+      fprintf(stdout,"Injection will run using Approximant %i (%s), phase order %i, amp order %i, spin order %i, tidal order %i, in the time domain.\n",approximant,XLALGetStringFromApproximant(approximant),order,amporder,(int) spinO, (int) tideO);
       XLALSimInspiralChooseTDWaveform(&hplus, &hcross, injEvent->coa_phase, 1.0/InjSampleRate,
                                       injEvent->mass1*LAL_MSUN_SI, injEvent->mass2*LAL_MSUN_SI, injEvent->spin1x,
                                       injEvent->spin1y, injEvent->spin1z, injEvent->spin2x, injEvent->spin2y,
@@ -2038,7 +2047,23 @@ void InjectTaylorF2(LALInferenceIFOData *IFOdata, SimInspiralTable *inj_table, P
 		fprintf(stdout,"adding dchi7=%1.3f in the injection\n",inj_table->dchi7);
 		
 		}
-	
+
+    if (strstr(inj_table->waveform,"PPE")){ 
+		REAL8 aPPE=inj_table->aPPE;
+		LALInferenceAddVariable(tmpdata->modelParams, "aPPE",&aPPE,LALINFERENCE_REAL8_t,LALINFERENCE_PARAM_LINEAR);
+		REAL8 alphaPPE=inj_table->alphaPPE;
+		LALInferenceAddVariable(tmpdata->modelParams, "alphaPPE",&alphaPPE,LALINFERENCE_REAL8_t,LALINFERENCE_PARAM_LINEAR);
+		REAL8 bPPE=inj_table->bPPE;
+		LALInferenceAddVariable(tmpdata->modelParams, "bPPE",&bPPE,LALINFERENCE_REAL8_t,LALINFERENCE_PARAM_LINEAR);
+		REAL8 betaPPE=inj_table->betaPPE;
+		LALInferenceAddVariable(tmpdata->modelParams, "betaPPE",&betaPPE,LALINFERENCE_REAL8_t,LALINFERENCE_PARAM_LINEAR);
+		fprintf(stdout,"Injecting %s in the frequency domain...\n",inj_table->waveform);
+		fprintf(stdout,"adding aPPE=%1.3f in the injection\n",inj_table->aPPE);
+		fprintf(stdout,"adding alphaPPE=%1.3f in the injection\n",inj_table->alphaPPE);
+		fprintf(stdout,"adding bPPE=%1.3f in the injection\n",inj_table->bPPE);
+        fprintf(stdout,"adding betaPPE=%1.3f in the injection\n",inj_table->betaPPE);
+		
+		}	
     
     LALInferenceAddVariable(tmpdata->modelParams, "LAL_AMPORDER",&amp_order,LALINFERENCE_INT4_t, LALINFERENCE_PARAM_FIXED);
 
@@ -2061,18 +2086,20 @@ void InjectTaylorF2(LALInferenceIFOData *IFOdata, SimInspiralTable *inj_table, P
         spinO = atoi(LALInferenceGetProcParamVal(commandLine, "--inj-spinOrder")->value);
         LALInferenceAddVariable(tmpdata->modelParams, "spinO", &spinO,   LALINFERENCE_INT4_t, LALINFERENCE_PARAM_FIXED);
     }
-    else
-        fprintf(stdout,"No --inj-spinOrder option given. Injecting the highest spin order for this waveform!\n");
+  
     LALSimInspiralTidalOrder tideO = LAL_SIM_INSPIRAL_TIDAL_ORDER_ALL;
 
     if(LALInferenceGetProcParamVal(commandLine, "--inj-tidalOrder")) {
         tideO = atoi(LALInferenceGetProcParamVal(commandLine, "--inj-tidalOrder")->value);
         LALInferenceAddVariable(tmpdata->modelParams, "tideO", &tideO,   LALINFERENCE_INT4_t, LALINFERENCE_PARAM_FIXED);
     }
-    else
-        fprintf(stdout,"No --inj-tidalOrder option given. Injecting the highest tidal order for this waveform!\n");
-    fprintf(stdout,"injectTaylorF2 will run using Approximant %i (%s), phase order %i, amp order %i, spinOrder %i TidalOrder %i in the Frequency domain.\n",injapprox,XLALGetStringFromApproximant(injapprox),phase_order,amp_order,(int) spinO,(int) tideO);
-    
+   
+   /* Print a line with information about approximant, amporder, phaseorder, tide order and spin order */
+    fprintf(stdout,"\n\n---\t\t ---\n");
+   fprintf(stdout,"Injection will run using Approximant %i (%s), phase order %i, amp order %i, spin order %i, tidal order %i, in the frequency domain.\n",injapprox,XLALGetStringFromApproximant(injapprox),phase_order,amp_order,(int) spinO,(int) tideO);
+     fprintf(stdout,"---\t\t ---\n\n");
+
+     
     COMPLEX16FrequencySeries *freqModelhCross=NULL;
    freqModelhCross=XLALCreateCOMPLEX16FrequencySeries("freqDatahC",&(tmpdata->timeData->epoch),0.0,tmpdata->freqData->deltaF,&lalDimensionlessUnit,tmpdata->freqData->data->length);
     COMPLEX16FrequencySeries *freqModelhPlus=NULL;
@@ -2258,7 +2285,6 @@ static void PrintSNRsToFile(LALInferenceIFOData *IFOdata , SimInspiralTable *inj
     will over-write and destroy any existing parameters. Param vary type will be fixed */
 void LALInferenceInjectionToVariables(SimInspiralTable *theEventTable, LALInferenceVariables *vars)
 {
-    UINT4 spinCheck=0;
     if(!vars) {
 	XLALPrintError("Encountered NULL variables pointer");
    	XLAL_ERROR_VOID(XLAL_EINVAL);
