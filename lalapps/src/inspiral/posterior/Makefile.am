@@ -50,6 +50,7 @@ bin_SCRIPTS = \
 	lalapps_nest_pipe \
 	lalapps_vo_nest2pos \
 	lalinference_pipe \
+        lalinference_multi_pipe \
 	lalapps_nest2pos \
 	lalapps_merge_nested_sampling_runs
 pkgpython_DATA = \
@@ -99,9 +100,10 @@ lalapps_vo_nest2pos: $(srcdir)/lalapps_vo_nest2pos.in python_config.sed
 lalinference_pipe: $(srcdir)/lalinference_pipe.in python_config.sed
 	$(AM_V_GEN)sed -f python_config.sed $(srcdir)/lalinference_pipe.in > lalinference_pipe
 	@chmod a+x lalinference_pipe
-lalinference_multi_pipe: $(srcdir)/lalinference_mulit_pipe.in python_config.sed
+	
+lalinference_multi_pipe: $(srcdir)/lalinference_multi_pipe.in python_config.sed
 	$(AM_V_GEN)sed -f python_config.sed $(srcdir)/lalinference_multi_pipe.in > lalinference_multi_pipe
-	@chmod a+x lalinference_mulit_pipe
+	@chmod a+x lalinference_multi_pipe
 
 lalapps_nest2pos: $(srcdir)/nest2pos.in python_config.sed
 	$(AM_V_GEN)sed -f python_config.sed $(srcdir)/nest2pos.in > lalapps_nest2pos
