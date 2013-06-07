@@ -69,6 +69,7 @@ EXTRA_DIST = \
 	combine_evidence.py \
 	lalapps_vo_nest2pos.in \
 	lalinference_pipe.in \
+	lalinference_multi_pipe.in \
 	lalinference_pipe_utils.py \
 	nest2pos.in \
 	nest2pos.py \
@@ -98,6 +99,9 @@ lalapps_vo_nest2pos: $(srcdir)/lalapps_vo_nest2pos.in python_config.sed
 lalinference_pipe: $(srcdir)/lalinference_pipe.in python_config.sed
 	$(AM_V_GEN)sed -f python_config.sed $(srcdir)/lalinference_pipe.in > lalinference_pipe
 	@chmod a+x lalinference_pipe
+lalinference_multi_pipe: $(srcdir)/lalinference_mulit_pipe.in python_config.sed
+	$(AM_V_GEN)sed -f python_config.sed $(srcdir)/lalinference_multi_pipe.in > lalinference_multi_pipe
+	@chmod a+x lalinference_mulit_pipe
 
 lalapps_nest2pos: $(srcdir)/nest2pos.in python_config.sed
 	$(AM_V_GEN)sed -f python_config.sed $(srcdir)/nest2pos.in > lalapps_nest2pos

@@ -55,7 +55,7 @@ class Event():
     if self.GID is not None:
         self.event_id=int(''.join(i for i in self.GID if i.isdigit()))
 
-dummyCacheNames=['LALLIGO','LALVirgo','LALAdLIGO','LALAdVirgo']
+dummyCacheNames=['LALLIGO','LALVirgo','LALAdLIGO','LALAdVirgo','LALSimAdLIGO','LALSimAdVirgo']
 
 def readLValert(lvalertfile,SNRthreshold=0,gid=None):
   """
@@ -244,7 +244,7 @@ def scan_timefile(timefile):
     return times
   
 class LALInferencePipelineDAG(pipeline.CondorDAG):
-  def __init__(self,cp,dax=False):
+  def __init__(self,cp,dax=False,first_dag=True,previous_dag=None):
     self.subfiles=[]
     self.config=cp
     self.engine=cp.get('analysis','engine')
@@ -257,10 +257,20 @@ class LALInferencePipelineDAG(pipeline.CondorDAG):
     mkdirs(self.basepath)
     self.posteriorpath=os.path.join(self.basepath,'posterior_samples')
     mkdirs(self.posteriorpath)
-    daglogdir=cp.get('paths','daglogdir')
-    mkdirs(daglogdir)
-    self.daglogfile=os.path.join(daglogdir,'lalinference_pipeline-'+str(uuid.uuid1())+'.log')
-    pipeline.CondorDAG.__init__(self,self.daglogfile,dax)
+    
+    if first_dag:
+      daglogdir=cp.get('paths','daglogdir')
+      mkdirs(daglogdir)
+      self.daglogfile=os.path.join(daglogdir,'lalinference_pipeline-'+str(uuid.uuid1())+'.log')
+      pipeline.CondorDAG.__init__(self,self.daglogfile,dax)
+    elif not first_dag and previous_dag is not None:
+      daglogdir=cp.get('paths','daglogdir')
+      mkdirs(daglogdir)
+      self.daglogfile=os.path.join(daglogdir,'lalinference_pipeline-'+str(uuid.uuid1())+'.log')
+      pipeline.CondorDAG.__init__(self,self.daglogfile,dax)
+      for node in previous_dag.get_nodes():
+        self.add_node(node)
+    
     if cp.has_option('paths','cachedir'):
       self.cachepath=cp.get('paths','cachedir')
     else:
