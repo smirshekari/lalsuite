@@ -2,15 +2,16 @@
 
 # DAG generation code for running LALInference pipeline
 # (C) 2012 John Veitch
+# 2013 Salvatore Vitale: extended to work with several ini files
 
 from lalapps import lalinference_pipe_utils as pipe_utils
 import ConfigParser
 from optparse import OptionParser,OptionValueError
 import sys
 
-usage=""" %prog [options] config.ini
+usage=""" %prog [options] config1.ini config2.ini ... configN.ini
 Setup a Condor DAG file to run the LALInference pipeline based on
-the config.ini file.
+N config.ini files.
 
 The user must specify either an injection file to analyse, with the --inj option,
 a list of SnglInspiralTable or CoincInspiralTable triggers with the --<x>-triggers options,
@@ -51,7 +52,7 @@ parser.add_option("-L","--lvalert",action="store",type="string",default=None,hel
 parser.add_option("--gid",action="store",type="string",default=None,help="Optional GraceDB ID for submitting results")
 parser.add_option("-I","--injections",action="store",type="string",default=None,help="List of injections to perform and analyse",metavar="INJFILE.xml")
 parser.add_option("-P","--pipedown-db",action="store",type="string",default=None,help="Pipedown database to read and analyse",metavar="pipedown.sqlite")
-parser.add_option("-F","--folder-names",dest="fnames",action="callback", callback=vararg_callback,help="These are the folders that will be created, corresponding to the parameters that are pinned or GR",default=None,metavar="GR phi1")
+parser.add_option("-F","--folder-names",dest="fnames",action="callback", callback=vararg_callback,help="Space separated list of folders that will be created, corresponding to the TIGER parameters that are being tested or GR. The order has to be the same used with the ini files!",default=None,metavar="GR phi1")
 parser.add_option("--condor-submit",action="store_true",default=False,help="Automatically submit the condor dag")
 
 
