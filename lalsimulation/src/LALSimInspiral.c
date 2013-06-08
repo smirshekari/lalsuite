@@ -2680,11 +2680,8 @@ int XLALSimInspiralImplementedFDApproximants(
         case IMRPhenomC:
         //case TaylorR2F4:
         case TaylorF2:
-<<<<<<< HEAD
         case TaylorF2Test:
         case PPE:
-=======
->>>>>>> master
         case SpinTaylorF2:
         case TaylorF2RedSpin:
         case TaylorF2RedSpinTidal:
@@ -2911,15 +2908,12 @@ char* XLALGetStringFromApproximant(Approximant approximant)
       return strdup("TaylorF2RedSpin");
     case TaylorF2:
       return strdup("TaylorF2");
-<<<<<<< HEAD
     case TaylorF2Test:
       return strdup("TaylorF2Test");
     case PPE:
       return strdup("PPE");
-=======
     case PhenSpinTaylor:
       return strdup("PhenSpinTaylor");
->>>>>>> master
     case TaylorR2F4:
       return strdup("TaylorR2F4");
     case PhenSpinTaylorRD:

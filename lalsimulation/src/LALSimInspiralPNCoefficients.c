@@ -1028,7 +1028,6 @@ XLALSimInspiralTaylorEtZeta_7PNCoeff(
 {
 	return (129.817/2.304 - 320.7739/4.8384 * eta + 61.3373/1.2096 * eta*eta) * LAL_PI;
 }
-<<<<<<< HEAD
 
 /** < TaylorF2 family */
 
@@ -1099,5 +1098,3 @@ XLALSimInspiralTaylorF2_35PNCoeff(REAL8 eta)
 {
     return LAL_PI * 5.L/756.L * ( 15419335.L/336.L + 75703.L/2.L * eta - 14809.L * eta*eta);
 }
-=======
->>>>>>> master
