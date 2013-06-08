@@ -21,10 +21,9 @@
 #define _LALSIMINSPIRAL_H
 
 #include <lal/LALDatatypes.h>
-#include <lal/LALSimIMR.h>
-#include  <lal/LALSimInspiralWaveformFlags.h>
-#include  <lal/LALSimInspiralTestGRParams.h>
-#include  <lal/TimeSeries.h>
+#include <lal/LALSimInspiralWaveformFlags.h>
+#include <lal/LALSimInspiralTestGRParams.h>
+#include <lal/TimeSeries.h>
 #include <gsl/gsl_matrix.h>
 
 #if defined(__cplusplus)
@@ -34,6 +33,8 @@ extern "C" {
 #endif
 
 #define LAL_PN_MODE_L_MAX 3
+/* (2x) Highest available PN order - UPDATE IF NEW ORDERS ADDED!!*/
+#define LAL_MAX_PN_ORDER 8
 
 /** Enum that specifies the PN approximant to be used in computing the waveform.
 */
@@ -69,8 +70,8 @@ typedef enum {
    SpinTaylorF2,	/**< Spinning case F2 models (single spin only) */
    SpinTaylorFrameless,	/**< Spinning case PN models (replace SpinTaylor by removing the coordinate singularity) */
    SpinTaylor,		/**< Spinning case PN models (should replace SpinTaylorT3 in the future) */
+   PhenSpinTaylor,      /**< Inspiral part of the PhenSpinTaylorRD. */
    PhenSpinTaylorRD,	/**< Phenomenological waveforms, interpolating between a T4 spin-inspiral and the ringdown. */
-   PhenSpinTaylorRDF,	/**< UNDOCUMENTED */
    SpinQuadTaylor,	/**< Spinning case PN models with quadrupole-monopole and self-spin interaction. */
    FindChirpSP,		/**< The stationary phase templates implemented by FindChirpSPTemplate in the findchirp package (equivalent to TaylorF2 at twoPN order). */
    FindChirpPTF,	/**< UNDOCUMENTED */
@@ -180,6 +181,10 @@ void XLALDestroySphHarmTimeSeries( SphHarmTimeSeries* ts );
  */
 UINT4 XLALSphHarmTimeSeriesGetMaxL( SphHarmTimeSeries* ts );
 
+#ifdef SWIG   // SWIG interface directives
+SWIGLAL(GET_OBJECT(COMPLEX16TimeSeries*, XLALSphHarmTimeSeriesGetMode));
+#endif
+
 /* 
  * Get the mode-decomposed time series corresponding to l,m.
  */
@@ -188,6 +193,24 @@ COMPLEX16TimeSeries* XLALSphHarmTimeSeriesGetMode(
 				UINT4 l, 
 				INT4 m 
 );
+
+/**
+ * Compute the polarizations from all the -2 spin-weighted spherical harmonic
+ * modes stored in 'hlms'. Be sure that 'hlms' is the head of the linked list!
+ *
+ * The computation done is:
+ * hp(t) - i hc(t) = \sum_l \sum_m h_lm(t) -2Y_lm(iota,psi)
+ *
+ * iota and psi are the inclination and polarization angle of the observer
+ * relative to the source of GWs.
+ */
+int XLALSimInspiralPolarizationsFromSphHarmTimeSeries(
+    REAL8TimeSeries **hp, /**< Plus polarization time series [returned] */
+    REAL8TimeSeries **hc, /**< Cross polarization time series [returned] */
+    SphHarmTimeSeries *hlms, /**< Head of linked list of waveform modes */
+    REAL8 iota, /**< inclination of viewer to source frame (rad) */
+    REAL8 psi /**< polarization angle (rad) */
+    );
 
 /**
  * Computes h(2,2) mode of spherical harmonic decomposition of
@@ -911,20 +934,12 @@ int XLALGetInteractionFromString(const CHAR *inString);
 int XLALGetFrameAxisFromString(const CHAR *inString);
 
 /** 
- * XLAL function to determine adaptive integration flag from a string.  Returns
- * 1 if string contains 'fixedStep', otherwise returns 0 to signal 
- * adaptive integration should be used.
+ * XLAL function to determine mode flag from a string.
+ * Returns one of enum values as name matches case of enum.
  */
-int XLALGetAdaptiveIntFromString(const CHAR *inString);
+int XLALGetHigherModesFromString(const CHAR *inString);
 
-/** 
- * XLAL function to determine inspiral-only flag from a string.  Returns
- * 1 if string contains 'inspiralOnly', otherwise returns 0 to signal 
- * full inspiral-merger-ringdown waveform should be generated.
- */
-int XLALGetInspiralOnlyFromString(const CHAR *inString);
-
-/** 
+/*
  * Construct and initialize a waveform cache.  Caches are used to
  * avoid re-computation of waveforms that differ only by simple
  * scaling relations in parameters.

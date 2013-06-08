@@ -75,7 +75,6 @@ int diffEmissionTime  ( EmissionTime  *diff, const EmissionTime *emit1, const Em
 int absmaxEmissionTime ( EmissionTime *absmax, const EmissionTime *demit1, const EmissionTime *demit2 );
 REAL8 maxErrInEmissionTime ( const EmissionTime *demit );
 
-INT4 lalDebugLevel = 5;
 
 // empty local initializers
 static const BarycenterInput empty_BarycenterInput;
@@ -91,9 +90,9 @@ main( void )
 {
   static LALStatus status;
 
-  char eEphFileBad[] = DATADIR "earth47.dat";
-  char eEphFile[] = DATADIR "earth98.dat";
-  char sEphFile[] = DATADIR "sun98.dat";
+  char eEphFileBad[] = TEST_DATA_DIR "earth47.dat";
+  char eEphFile[] = TEST_DATA_DIR "earth98.dat";
+  char sEphFile[] = TEST_DATA_DIR "sun98.dat";
 
   /* Checking response if data files not present */
   EphemerisData edat;

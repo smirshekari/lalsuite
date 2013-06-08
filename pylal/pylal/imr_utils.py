@@ -267,7 +267,7 @@ def guess_nd_bins(sims, bin_dict = {"distance": (200, rate.LogarithmicBins)}):
 	Given a dictionary of bin counts and bin objects keyed by sim
 	attribute, come up with a sensible NDBins scheme
 	"""
-	return rate.NDBins([bintup[1](min([getattr(sim, attr) for sim in sims]), max([getattr(sim, attr) for sim in sims]), bintup[0]) for attr, bintup in bin_dict.items()])
+	return rate.NDBins([bintup[1](min([getattr(sim, attr) for sim in sims]), max([getattr(sim, attr) for sim in sims]) + sys.float_info.epsilon, bintup[0]) for attr, bintup in bin_dict.items()])
 
 
 def guess_distance_mass1_mass2_bins_from_sims(sims, mass1bins = 11, mass2bins = 11, distbins = 200):
@@ -450,6 +450,8 @@ class DataBaseSummary(object):
 					self.this_injection_instruments.append(instruments_set)
 					segments_to_consider_for_these_injections = self.this_injection_segments.intersection(instruments_set) - self.this_injection_segments.union(set(self.this_injection_segments.keys()) - instruments_set)
 					found, total, missed = get_min_far_inspiral_injections(connection, segments = segments_to_consider_for_these_injections, table_name = self.table_name)
+					if verbose:
+						print >> sys.stderr, "Total injections: %d; Found injections %d: Missed injections %d" % (len(total), len(found), len(missed))
 					self.found_injections_by_instrument_set.setdefault(instruments_set, []).extend(found)
 					self.total_injections_by_instrument_set.setdefault(instruments_set, []).extend(total)
 					self.missed_injections_by_instrument_set.setdefault(instruments_set, []).extend(missed)

@@ -135,9 +135,7 @@ FrCache;
  *
 */
 #ifdef SWIG /* SWIG interface directives */
-%warnfilter(SWIGWARN_TYPEMAP_CHARLEAK) tagFrCacheSieve::srcRegEx;
-%warnfilter(SWIGWARN_TYPEMAP_CHARLEAK) tagFrCacheSieve::dscRegEx;
-%warnfilter(SWIGWARN_TYPEMAP_CHARLEAK) tagFrCacheSieve::urlRegEx;
+SWIGLAL(IMMUTABLE_MEMBERS(tagFrCacheSieve, srcRegEx, dscRegEx, urlRegEx));
 #endif /* SWIG */
 typedef struct
 tagFrCacheSieve

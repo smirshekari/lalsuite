@@ -129,7 +129,6 @@ int main(int UNUSED argc, char **argv)
 
   static LALStatus status; /* status structure */
 
-  lalDebugLevel = 1;
 
   /* initialize status */
   status.statusCode = 0;
@@ -189,8 +188,8 @@ void RunGeneratePulsarSignalTest(LALStatus *status)
   CHAR IFO[6] = "LHO";
   EphemerisData *edat = NULL;
 
-  char earthFile[] = DATADIR "earth00-19-DE405.dat.gz";
-  char sunFile[]   = DATADIR "sun00-19-DE405.dat.gz";
+  char earthFile[] = TEST_DATA_DIR "earth00-19-DE405.dat.gz";
+  char sunFile[]   = TEST_DATA_DIR "sun00-19-DE405.dat.gz";
 
   /* containers for sky position and spindown data */
   REAL8 **skyPosData;

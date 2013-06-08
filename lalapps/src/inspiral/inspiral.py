@@ -143,6 +143,7 @@ class InspInjJob(InspiralAnalysisJob):
     sections = ['inspinj']
     extension = 'xml'
     InspiralAnalysisJob.__init__(self,cp,sections,exec_name,extension,dax)
+    self.set_universe('vanilla')
 
     self.__listDone=[]
     self.__listNodes=[]
@@ -453,7 +454,7 @@ class ThincaToCoincJob(InspiralAnalysisJob):
     """
     Adds the simulation argument to the job.
     """
-    self.add_opt('simulation', None)
+    self.add_opt('simulation', '')
 
 class HWinjPageJob(InspiralAnalysisJob):
   """
@@ -2560,7 +2561,7 @@ class MiniFollowupsJob(InspiralPlottingJob):
     """
     Turns on the --time-slides argument.
     """
-    self.add_opt('time-slides', None)
+    self.add_opt('time-slides', '')
 
 
 class MiniFollowupsNode(InspiralPlottingNode):
@@ -2763,6 +2764,7 @@ class DBAddInjNode(pipeline.SqliteNode):
     """
     pipeline.SqliteNode.__init__(self, job)
     self.__injection_file = None
+    self.__inj_tag = None
 
   def set_injection_file( self, injection_file ):
     """
@@ -2778,6 +2780,18 @@ class DBAddInjNode(pipeline.SqliteNode):
     """
     return self._injection_file
 
+  def set_inj_tag( self, inj_tag):
+    """
+    @inj_tag: Injection tag used to name the injection files
+    """
+    self.add_var_opt( 'sim-tag', inj_tag )
+    self.__inj_tag = inj_tag
+
+  def get_inj_tag( self):
+    """
+    Returns injection_tag for this node.
+    """
+    return self.__inj_tag
 
 class RepopCoincJob(pipeline.SqliteJob):
   """

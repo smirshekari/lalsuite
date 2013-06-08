@@ -3,11 +3,11 @@
 import os, glob, optparse, shutil, warnings, matplotlib, pickle, math, copy, pickle
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.signal
+import scipy.signal, scipy.stats
 from collections import namedtuple
-from subprocess import Popen, PIPE, STDOUT
 from pylal.xlal.datatypes.ligotimegps import LIGOTimeGPS
 from pylal.xlal.date import XLALGPSToUTC
+import pylal.seriesutils
 from pylal import Fr
 from pylal.dq import dqDataUtils
 import pylal.pylal_seismon_NLNM, pylal.pylal_seismon_html
@@ -28,7 +28,7 @@ def read_frames(start_time,end_time,channel,cache):
 
     #== loop over frames in cache
     for frame in cache:
-        frame_data,data_start,_,dt,_,_ = Fr.frgetvect1d(frame,channel.station)
+        frame_data,data_start,_,dt,_,_ = Fr.frgetvect1d(frame.path,channel.station)
         frame_length = float(dt)*len(frame_data)
         frame_time = data_start+dt*np.arange(len(frame_data))
 
@@ -37,20 +37,26 @@ def read_frames(start_time,end_time,channel,cache):
             if frame_time[i] >= end_time:  continue
             time.append(frame_time[i])
             data.append(frame_data[i])
-        data = [e/channel.calibration for e in data]
+    data = [e/channel.calibration for e in data]
 
     return time,data
 
-def mat(params, channel):
+def mat(params, channel, segment):
 
     psdLocation = params["dirPath"] + "/Text_Files/PSD/" + channel.station_underscore
     if not os.path.isdir(psdLocation):
         os.makedirs(psdLocation)
+    psdLocation = os.path.join(psdLocation,str(params["fftDuration"])) 
+    if not os.path.isdir(psdLocation):
+        os.makedirs(psdLocation)
 
-    time,data = read_frames(params["gpsStart"],params["gpsEnd"],channel,params["frame"])
-    #freq,spectra = dqDataUtils.spectrum(data, channel.samplef, NFFT=len(data), overlap = 0)
+    gpsStart = segment[0]
+    gpsEnd = segment[1]
 
-    spectra, freq = matplotlib.pyplot.psd(data, NFFT=64*channel.samplef, Fs=channel.samplef, Fc=0, detrend=matplotlib.mlab.detrend_mean,window=matplotlib.mlab.window_hanning)
+    time,data = read_frames(gpsStart,gpsEnd,channel,params["frame"])
+
+    NFFT = params["fftDuration"]*channel.samplef
+    spectra, freq = matplotlib.pyplot.psd(data, NFFT=NFFT, Fs=channel.samplef, Fc=0, detrend=matplotlib.mlab.detrend_mean,window=matplotlib.mlab.window_hanning)
     plt.close('all')
 
     spectra = [math.sqrt(e) for e in spectra]
@@ -66,7 +72,7 @@ def mat(params, channel):
     spectra = newSpectra
     freq = newFreq
 
-    psdFile = psdLocation + "/" + str(params["gpsStart"]) + ".txt"
+    psdFile = os.path.join(psdLocation,"%d-%d.txt"%(gpsStart,gpsEnd))
     f = open(psdFile,"wb")
     for i in xrange(len(freq)):
         f.write("%e %e\n"%(freq[i],spectra[i]))
@@ -74,9 +80,9 @@ def mat(params, channel):
 
     earthquakesDirectory = os.path.join(params["path"],"earthquakes")
     earthquakesFile = os.path.join(earthquakesDirectory,"earthquakes.txt")
-    if os.path.isfile(earthquakesFile):
+    try:
         earthquakes = np.loadtxt(earthquakesFile)
-    else:
+    except:
         earthquakes = []
 
     if params["doPlots"]:
@@ -86,6 +92,9 @@ def mat(params, channel):
             os.makedirs(plotLocation)        
 
         startTime = np.min(time)
+        startTimeUTC = XLALGPSToUTC(LIGOTimeGPS(int(startTime)))
+        startTimeUTCString = "%d-%d-%d %d:%d:%d"%(startTimeUTC[0],startTimeUTC[1],startTimeUTC[2],startTimeUTC[3],startTimeUTC[4],startTimeUTC[5])
+
         time = time - startTime
 
         norm_pass = 1.0/(channel.samplef/2)
@@ -109,7 +118,13 @@ def mat(params, channel):
         plt.legend(loc=1,prop={'size':10})
 
         if len(earthquakes) > 0:
-            for i in xrange(len(earthquakes)):
+            if len(earthquakes.shape) == 1:
+                shape_x = 1
+            else:
+                [shape_x,shape_y] = earthquakes.shape
+            for i in xrange(shape_x):
+                if earthquakes[i,1] < 4.0:
+                    continue
 
                 Ptime = earthquakes[i,2] - startTime
                 Stime = earthquakes[i,3] - startTime
@@ -123,7 +138,7 @@ def mat(params, channel):
                 plt.axvline(x=Stime,color='b',linewidth=2,zorder = 0,clip_on=False)
                 plt.axvline(x=Rtime,color='g',linewidth=2,zorder = 0,clip_on=False)
 
-        plt.xlabel("Time [s] [%d]"%(startTime))
+        plt.xlabel("Time [s] [%s (%d)]"%(startTimeUTCString,startTime))
         plt.ylabel("Normalized Amplitude")
         plt.xlim([np.min(time),np.max(time)])
 
@@ -134,16 +149,146 @@ def mat(params, channel):
 
         fl, low, fh, high = pylal.pylal_seismon_NLNM.NLNM(2)
 
-        plt.semilogx(freq,spectra, 'k')
-        plt.loglog(fl,low,'k-.',fh,high,'k-.')
+        try:
+            plt.semilogx(freq,spectra, 'k')
+            plt.loglog(fl,low,'k-.',fh,high,'k-.')
+        except:
+            pass
         plt.xlim([params["fmin"],params["fmax"]])
         plt.ylim([10**-10, 10**-5])
         plt.xlabel("Frequency [Hz]")
-        plt.ylabel("Seismic Spectrum [(m/s)/\surd Hz]")
-        plt.grid
+        plt.ylabel("Seismic Spectrum [(m/s)/rtHz]")
+        plt.grid()
         plt.show()
         plt.savefig(os.path.join(plotLocation,"psd.png"),dpi=200)
         plt.savefig(os.path.join(plotLocation,"psd.eps"),dpi=200)
+        plt.close('all')
+
+def freq_analysis(params,channel,tt,freq,spectra):
+
+    if params["doPlots"]:
+        plotLocation = params["path"] + "/" + channel.station_underscore
+        if not os.path.isdir(plotLocation):
+            os.makedirs(plotLocation)
+        plotLocation = params["path"] + "/" + channel.station_underscore + "/freq" 
+        if not os.path.isdir(plotLocation):
+            os.makedirs(plotLocation)
+ 
+    indexes = np.logspace(0,np.log10(len(freq)-1),num=100)
+    indexes = list(np.unique(np.ceil(indexes)))
+    indexes = range(len(freq))
+    #indexes = range(16)
+
+    indexes = np.where(10.0 >= freq)[0]
+
+    deltaT = tt[1] - tt[0]
+
+    n_dist = []
+    for j in xrange(1000):
+        n_dist.append(scipy.stats.chi2.rvs(2))
+
+    p_chi2_vals = []
+    p_ks_vals = []
+    ttCoh_vals = []
+
+    for i in indexes:
+        vals = spectra[:,i]
+
+        meanPSD = np.mean(vals) 
+        stdPSD = np.std(vals)
+
+        vals_norm = 2 * vals / meanPSD
+
+        bins = np.arange(0,10,1)
+        (n,bins) = np.histogram(vals_norm,bins=bins)
+        n_total = np.sum(n)
+
+        bins = (bins[1:] + bins[:len(bins)-1])/2
+
+        n_expected = []
+        for bin in bins:
+            expected_val = n_total * scipy.stats.chi2.pdf(bin, 2)
+            n_expected.append(expected_val)
+        n_expected = np.array(n_expected)
+
+        (stat_chi2,p_chi2) = scipy.stats.mstats.chisquare(n, f_exp=n_expected)
+        p_chi2_vals.append(p_chi2)
+
+        (stat_ks,p_ks) = scipy.stats.ks_2samp(vals_norm, n_dist)
+        p_ks_vals.append(p_ks)
+
+        acov = np.correlate(vals,vals,"full")
+        acov = acov / np.max(acov)
+
+        ttCov = (np.arange(len(acov)) - len(acov)/2) * float(deltaT)
+
+        #ttLimitMin = - 5/freq[i]
+        #ttLimitMax = 5 /freq[i]
+
+        ttLimitMin = - float('inf')
+        ttLimitMax = float('inf')
+
+        ttIndexes = np.intersect1d(np.where(ttCov >= ttLimitMin)[0],np.where(ttCov <= ttLimitMax)[0])
+        #ttCov = ttCov / (60)
+
+        acov_minus_05 = np.absolute(acov[ttIndexes] - 0.66)
+        index_min = acov_minus_05.argmin()
+
+        ttCoh = np.absolute(ttCov[ttIndexes[index_min]])
+        ttCoh_vals.append(ttCoh)
+
+        print freq[i], ttCoh, len(ttIndexes)
+
+        if len(ttIndexes) == 0:
+            continue
+
+        #if freq[i] > 0:
+        #    continue
+
+        if params["doPlots"]:
+            ax = plt.subplot(111)
+            plt.plot(bins,n,label='true')
+            plt.plot(bins,n_expected,'k*',label='expected')
+            plt.xlabel("2 * data / mean")
+            plt.ylabel("Counts")
+            plot_title = "p-value: %f"%p_chi2
+            plt.title(plot_title)
+            plt.legend()
+            plt.show()
+            plt.savefig(os.path.join(plotLocation,"%s_dist.png"%str(freq[i])),dpi=200)
+            plt.savefig(os.path.join(plotLocation,"%s_dist.eps"%str(freq[i])),dpi=200)
+            plt.close('all')
+
+            ax = plt.subplot(111)
+            plt.semilogy(ttCov[ttIndexes],acov[ttIndexes])
+            plt.vlines(ttCoh,10**(-3),1,color='r')
+            plt.vlines(-ttCoh,10**(-3),1,color='r')
+            plt.xlabel("Time [Seconds]")
+            plt.ylabel("Correlation")
+            plt.show()
+            plt.savefig(os.path.join(plotLocation,"%s_cov.png"%str(freq[i])),dpi=200)
+            plt.savefig(os.path.join(plotLocation,"%s_cov.eps"%str(freq[i])),dpi=200)
+            plt.close('all')
+
+    if params["doPlots"]:
+        ax = plt.subplot(111)
+        plt.loglog(freq[indexes],p_chi2_vals,label='chi2')
+        plt.loglog(freq[indexes],p_ks_vals,label='k-s')
+        plt.xlabel("Frequency [Hz]")
+        plt.ylabel("p-value")
+        plt.legend(loc=3)
+        plt.show()
+        plt.savefig(os.path.join(plotLocation,"freq_analysis.png"),dpi=200)
+        plt.savefig(os.path.join(plotLocation,"freq_analysis.eps"),dpi=200)
+        plt.close('all')      
+
+        ax = plt.subplot(111)
+        plt.semilogx(freq[indexes],ttCoh_vals)
+        plt.xlabel("Frequency [Hz]")
+        plt.ylabel("Coherence Time [s]")
+        plt.show()
+        plt.savefig(os.path.join(plotLocation,"ttCohs.png"),dpi=200)
+        plt.savefig(os.path.join(plotLocation,"ttCohs.eps"),dpi=200)
         plt.close('all')
 
 def spectral_histogram(data,bins):
@@ -205,17 +350,30 @@ def html_bgcolor(snr,data):
 def analysis(params, channel):
 
     psdLocation = params["dirPath"] + "/Text_Files/PSD/" + channel.station_underscore
+    psdLocation = os.path.join(psdLocation,str(params["fftDuration"]))
     files = glob.glob(os.path.join(psdLocation,"*.txt"))
 
-    tt = []
+    files = sorted(files)
+
+    if not params["doFreqAnalysis"]:
+        if len(files) > 1000:
+            files = files[-1000:]
+
+    ttStart = []
+    ttEnd = []
     freq = []
     spectra = []
 
     for file in files:
 
         fileSplit = file.split("/")
-        thisTT = float(fileSplit[-1].replace(".txt",""))
-        tt.append(thisTT)
+        txtFile = fileSplit[-1].replace(".txt","")
+        txtFileSplit = txtFile.split("-")
+        thisTTStart = int(txtFileSplit[0])
+        thisTTEnd = int(txtFileSplit[1])
+
+        ttStart.append(thisTTStart)
+        ttEnd.append(thisTTEnd)
 
         data = np.loadtxt(file)
         thisSpectra = data[:,1]
@@ -227,7 +385,7 @@ def analysis(params, channel):
             spectra = np.array(thisSpectra)
         else:
             spectra = np.vstack([spectra,np.array(copy.copy(thisSpectra))])
-        if thisTT == params["gpsStart"]:
+        if thisTTStart == params["gpsStart"]:
             freqNow = copy.copy(thisFreq)
             spectraNow = copy.copy(thisSpectra)
 
@@ -235,10 +393,22 @@ def analysis(params, channel):
     nb = 500
     range_binning = np.logspace(-10,-5,num=nb);
 
+    try:
+        spectra.max(axis = 1)
+    except:
+        print "Requires more than one spectra for analysis, continuing..."
+        return
+
     spectra[spectra==float('Inf')] = 0
 
     # Calculate bin histogram of PSDs
-    which_spectra = np.all([spectra.max(axis = 1) <= 10**-4,spectra.max(axis = 1) >= 10**-10],axis=0)
+    which_spectra = np.all([spectra.max(axis = 1) <= 10**-3,spectra.max(axis = 1) >= 10**-12],axis=0)
+
+    if len(spectra[which_spectra]) == 0:
+        return
+
+    if params["doFreqAnalysis"]:
+        freq_analysis(params,channel,ttStart,freq,spectra[which_spectra])
 
     spectral_variation_norm = spectral_histogram(spectra[which_spectra],range_binning)
 
@@ -308,11 +478,28 @@ def analysis(params, channel):
         plt.xlim([params["fmin"],params["fmax"]])
         plt.ylim([10**-10, 10**-5])
         plt.xlabel("Frequency [Hz]")
-        plt.ylabel("Seismic Spectrum [(m/s)/\surd Hz]")
-        plt.grid
+        plt.ylabel("Seismic Spectrum [(m/s)/rtHz]")
+        plt.grid()
         plt.show()
         plt.savefig(os.path.join(plotLocation,"psd.png"),dpi=200)
         plt.savefig(os.path.join(plotLocation,"psd.eps"),dpi=200)
+        plt.close('all')
+
+        plt.semilogx(freqNow,[y/x for x,y in zip(freqNow,spectraNow)], 'k', label='Current')
+        plt.semilogx(freq,[y/x for x,y in zip(freq,spectral_variation_norm_10per)],'b',label='10')
+        plt.semilogx(freq,[y/x for x,y in zip(freq,spectral_variation_norm_50per)],'r',label='50')
+        plt.semilogx(freq,[y/x for x,y in zip(freq,spectral_variation_norm_90per)],'g',label='90')
+        plt.loglog(fl,[y/x for x,y in zip(fl,low)],'k-.')
+        plt.loglog(fh,[y/x for x,y in zip(fl,high)],'k-.',label='LNM/HNM')
+        plt.legend(loc=3,prop={'size':10})
+        plt.xlim([params["fmin"],params["fmax"]])
+        plt.ylim([10**-10, 10**-5])
+        plt.xlabel("Frequency [Hz]")
+        plt.ylabel("Seismic Spectrum [m/rtHz]")
+        plt.grid()
+        plt.show()
+        plt.savefig(os.path.join(plotLocation,"disp.png"),dpi=200)
+        plt.savefig(os.path.join(plotLocation,"disp.eps"),dpi=200)
         plt.close('all')
 
         indexes = np.unique(np.floor(np.logspace(0, np.log10(len(freq)-1), num=100)))
@@ -334,15 +521,20 @@ def analysis(params, channel):
         plt.xlim([params["fmin"],params["fmax"]])
         plt.ylim([10**-10, 10**-5])
         plt.xlabel("Frequency [Hz]")
-        plt.ylabel("Seismic Spectrum [(m/s)/\surd Hz]")
-        plt.grid
+        plt.ylabel("Seismic Spectrum [(m/s)/rtHz]")
+        plt.grid()
         plt.show()
         plt.savefig(os.path.join(plotLocation,"specvar.png"),dpi=200)
         plt.savefig(os.path.join(plotLocation,"specvar.eps"),dpi=200)
         plt.close('all')
 
-        ttStart = min(tt)
-        tt = [(c-ttStart)/(60*60) for c in tt]
+        ttStart = np.array(ttStart)
+        indices_ttStart = np.where(ttStart >= params["gpsStart"] - 12*60*60)
+        ttStart = ttStart[indices_ttStart]
+
+        spectra = np.squeeze(spectra[indices_ttStart,:])
+        ttStartMin = min(ttStart)
+        tt = [(c-ttStartMin)/(60*60) for c in ttStart]
 
         #X,Y = np.meshgrid(freq, tt)
         X,Y = np.meshgrid(freq[indices], tt)
@@ -354,8 +546,8 @@ def analysis(params, channel):
         plt.xlabel("Frequency [Hz]")
         plt.ylabel("Time [Hours]")
         cbar=plt.colorbar()
-        cbar.set_label('log10(Seismic Spectrum [(m/s)/\surd Hz])') 
-        plt.grid
+        cbar.set_label('log10(Seismic Spectrum [(m/s)/rtHz])') 
+        plt.grid()
         plt.show()
         plt.savefig(os.path.join(plotLocation,"tf.png"),dpi=200)
         plt.savefig(os.path.join(plotLocation,"tf.eps"),dpi=200)

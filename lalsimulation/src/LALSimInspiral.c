@@ -26,6 +26,7 @@
 #include <gsl/gsl_odeiv.h>
 
 #include <lal/LALSimInspiral.h>
+#include <lal/LALSimIMR.h>
 #include <lal/LALConstants.h>
 #include <lal/LALStdlib.h>
 #include <lal/TimeSeries.h>
@@ -352,9 +353,9 @@ static int checkTidesZero(REAL8 lambda1, REAL8 lambda2)
 	} while (0)
 
 /* 
- * Structyure to carry a collectio of spherical harmonic modes in COMPLEX16 
+ * Structure to carry a collection of spherical harmonic modes in COMPLEX16
  * time series. Contains convenience getter and setter functions, as well as
- * a convienence "maximum l mode" function. Implemented as a singly forward
+ * a convenience "maximum l mode" function. Implemented as a singly forward
  * linked list.
  */
 struct
@@ -366,9 +367,16 @@ tagSphHarmTimeSeries
     struct tagSphHarmTimeSeries*    next; /**< next pointer */
 };
 
-/* Prepend a node to the linked list - or - create a new head */
-SphHarmTimeSeries* XLALSphHarmTimeSeriesAddMode( SphHarmTimeSeries *appended, const COMPLEX16TimeSeries* inmode, UINT4 l, INT4 m ){
-
+/**
+ * Prepend a node to a linked list of SphHarmTimeSeries, or create a new head
+ */
+SphHarmTimeSeries* XLALSphHarmTimeSeriesAddMode(
+            SphHarmTimeSeries *appended, /**< Linked list to be prepended */
+            const COMPLEX16TimeSeries* inmode, /**< Time series of h_lm mode being prepended */
+            UINT4 l, /**< l index of h_lm mode being prepended */
+            INT4 m /**< m index of h_lm mode being prepended */
+            )
+{
     SphHarmTimeSeries* ts;
 
 	// Check if the node with this l, m already exists
@@ -382,7 +390,7 @@ SphHarmTimeSeries* XLALSphHarmTimeSeriesAddMode( SphHarmTimeSeries *appended, co
 
 	if( ts ){
 		XLALDestroyCOMPLEX16TimeSeries( ts->mode );
-    	ts->mode = XLALCutCOMPLEX16TimeSeries( inmode, 0, inmode->data->length );
+		ts->mode = XLALCutCOMPLEX16TimeSeries( inmode, 0, inmode->data->length);
 		return appended;
 	} else {
     	ts = XLALMalloc( sizeof(SphHarmTimeSeries) );
@@ -393,7 +401,7 @@ SphHarmTimeSeries* XLALSphHarmTimeSeriesAddMode( SphHarmTimeSeries *appended, co
 	// Cut returns a new series using a slice of the original. I ask it to
 	// return a new one for the full data length --- essentially a duplication
 	if( inmode ){
-    	ts->mode = XLALCutCOMPLEX16TimeSeries( inmode, 0, inmode->data->length );
+		ts->mode = XLALCutCOMPLEX16TimeSeries( inmode, 0, inmode->data->length);
 	} else {
 		ts->mode = NULL;
 	}
@@ -407,8 +415,11 @@ SphHarmTimeSeries* XLALSphHarmTimeSeriesAddMode( SphHarmTimeSeries *appended, co
     return ts;
 }
 
-/* Delete list from current pointer to the end of the list */
-void XLALDestroySphHarmTimeSeries( SphHarmTimeSeries* ts ){
+/** Delete list from current pointer to the end of the list */
+void XLALDestroySphHarmTimeSeries(
+            SphHarmTimeSeries* ts /**< Head of linked list to destroy */
+            )
+{
     SphHarmTimeSeries* pop;
     while( (pop = ts) ){
 		if( pop->mode ){
@@ -419,10 +430,16 @@ void XLALDestroySphHarmTimeSeries( SphHarmTimeSeries* ts ){
     }
 }
 
-/* 
- * Get the mode-decomposed time series corresponding to l,m.
+/**
+ * Get the time series of a waveform's (l,m) spherical harmonic mode from a
+ * SphHarmTimeSeries linked list. Returns a pointer to its COMPLEX16TimeSeries
  */
-COMPLEX16TimeSeries* XLALSphHarmTimeSeriesGetMode( SphHarmTimeSeries *ts , UINT4 l, INT4 m ){
+COMPLEX16TimeSeries* XLALSphHarmTimeSeriesGetMode(
+            SphHarmTimeSeries *ts, /** linked list to extract mode from */
+            UINT4 l, /**< l index of h_lm mode to get */
+            INT4 m /**< m index of h_lm mode to get */
+            )
+{
     if( !ts ) return NULL;
 
     SphHarmTimeSeries *itr = ts;
@@ -433,8 +450,8 @@ COMPLEX16TimeSeries* XLALSphHarmTimeSeriesGetMode( SphHarmTimeSeries *ts , UINT4
     return itr->mode;
 }
 
-/* 
- * Get the maximum major mode added to structure.
+/**
+ * Get the largest l index of any mode in the SphHarmTimeSeries linked list
  */
 UINT4 XLALSphHarmTimeSeriesGetMaxL( SphHarmTimeSeries* ts ){
     SphHarmTimeSeries *itr = ts;
@@ -445,6 +462,46 @@ UINT4 XLALSphHarmTimeSeriesGetMaxL( SphHarmTimeSeries* ts ){
 		itr = itr ->next;
     }
     return maxl;
+}
+
+/**
+ * Compute the polarizations from all the -2 spin-weighted spherical harmonic
+ * modes stored in 'hlms'. Be sure that 'hlms' is the head of the linked list!
+ *
+ * The computation done is:
+ * hp(t) - i hc(t) = \sum_l \sum_m h_lm(t) -2Y_lm(iota,psi)
+ *
+ * iota and psi are the inclination and polarization angle of the observer
+ * relative to the source of GWs.
+ */
+int XLALSimInspiralPolarizationsFromSphHarmTimeSeries(
+    REAL8TimeSeries **hp, /**< Plus polarization time series [returned] */
+    REAL8TimeSeries **hc, /**< Cross polarization time series [returned] */
+    SphHarmTimeSeries *hlms, /**< Head of linked list of waveform modes */
+    REAL8 iota, /**< inclination of viewer to source frame (rad) */
+    REAL8 psi /**< polarization angle (rad) */
+    )
+{
+    int ret;
+    SphHarmTimeSeries *ts = hlms;
+    size_t length = ts->mode->data->length;
+    // Destroy hp, hc TimeSeries if they already exist
+    if( (*hp) ) XLALDestroyREAL8TimeSeries( *hp );
+    if( (*hc) ) XLALDestroyREAL8TimeSeries( *hc );
+    *hp = XLALCreateREAL8TimeSeries("hplus", &(ts->mode->epoch), ts->mode->f0,
+                ts->mode->deltaT, &lalStrainUnit, length);
+    *hc = XLALCreateREAL8TimeSeries("hplus", &(ts->mode->epoch), ts->mode->f0,
+                ts->mode->deltaT, &lalStrainUnit, length);
+    memset( (*hp)->data->data, 0, (*hp)->data->length*sizeof(REAL8) );
+    memset( (*hc)->data->data, 0, (*hc)->data->length*sizeof(REAL8) );
+    while (ts) { // Add the contribution from the current mode to hp, hx...
+        // This function adds hlm(t) * Y_lm(incl,psi) to (h+ - i hx)(t)
+        ret = XLALSimAddMode(*hp, *hc, ts->mode, iota, psi, ts->l, ts->m, 0);
+        if( ret != XLAL_SUCCESS ) XLAL_ERROR(XLAL_EFUNC);
+        ts = ts->next;
+    }
+
+    return XLAL_SUCCESS;
 }
 
 /**
@@ -971,6 +1028,8 @@ int XLALSimInspiralPNPolarizationWaveforms(
  *
  * NOTE: The vectors MUST be given in the so-called radiation frame where
  * Z is the direction of propagation, X is the principal '+' axis and Y = Z x X
+ * For different convention (Z is the direction of initial total angular
+ * momentum, useful for GRB and comparison to NR, see XLALSimSpinInspiralGenerator())
  */
 int XLALSimInspiralPrecessingPolarizationWaveforms(
 	REAL8TimeSeries **hplus,  /**< +-polarization waveform [returned] */
@@ -1655,11 +1714,8 @@ int XLALSimInspiralChooseTDWaveform(
     REAL8 v0 = 1., quadparam1 = 1., quadparam2 = 1.;
 
     /* General sanity checks that will abort */
-    /*
-     * If non-GR approximants are added, change the below to
-     * if( nonGRparams && approximant != nonGR1 && approximant != nonGR2 )
-     */
-    if( nonGRparams )
+
+    if( nonGRparams && approximant != PhenSpinTaylor && approximant != PhenSpinTaylorRD )
     {
         XLALPrintError("XLAL Error - %s: Passed in non-NULL pointer to LALSimInspiralTestGRParam for an approximant that does not use LALSimInspiralTestGRParam\n", __func__);
         XLAL_ERROR(XLAL_EINVAL);
@@ -1898,17 +1954,26 @@ int XLALSimInspiralChooseTDWaveform(
                     f_min, 0., r, i);
             break;
 
+        case PhenSpinTaylor:
+            /* Waveform-specific sanity checks */
+            if( !checkTidesZero(lambda1, lambda2) )
+                ABORT_NONZERO_TIDES(waveFlags);
+            /* Call the waveform driver routine */
+            ret = XLALSimSpinInspiralGenerator(hplus, hcross, phiRef,
+					       deltaT, m1, m2, f_min, f_ref, r, i, S1x, S1y, S1z, S2x, S2y, S2z,
+					       phaseO, amplitudeO, waveFlags, nonGRparams);
+            break;
+
         case PhenSpinTaylorRD:
             /* Waveform-specific sanity checks */
-            // FIXME: need to create a function to take in different modes or produce an error if all modes not given
             if( !checkTidesZero(lambda1, lambda2) )
                 ABORT_NONZERO_TIDES(waveFlags);
             if( f_ref != 0.)
                 XLALPrintWarning("XLAL Warning - %s: This approximant does use f_ref. The reference phase will be defined at the start.\n", __func__);
             /* Call the waveform driver routine */
-            ret = XLALSimIMRPSpinInspiralRDGenerator(hplus, hcross, phiRef,
-                    deltaT, m1, m2, f_min, r, i, S1x, S1y, S1z, S2x, S2y, S2z,
-                    phaseO, XLALSimInspiralGetFrameAxis(waveFlags), 0);
+            ret = XLALSimIMRPhenSpinInspiralRDGenerator(hplus, hcross, phiRef,
+							deltaT, m1, m2, f_min, f_ref, r, i, S1x, S1y, S1z, S2x, S2y, S2z,
+							phaseO, amplitudeO,  waveFlags, nonGRparams);
             break;
 
         case SEOBNRv1:
@@ -1931,8 +1996,7 @@ int XLALSimInspiralChooseTDWaveform(
             XLAL_ERROR(XLAL_EINVAL);
     }
 
-    if (ret == XLAL_FAILURE)
-        XLAL_ERROR(XLAL_EFUNC);
+    if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
 
     return ret;
 }
@@ -2023,6 +2087,7 @@ int XLALSimInspiralChooseFDWaveform(
                     XLALSimInspiralGetSpinOrder(waveFlags),
                     XLALSimInspiralGetTidalOrder(waveFlags),
                     phaseO, amplitudeO);
+            if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
             /* The above returns h(f) for optimal orientation (i=0, Fp=1, Fc=0)
              * To get generic polarizations we multiply by incl. dependence
              * and note hc(f) \propto I * hp(f)
@@ -2104,6 +2169,7 @@ int XLALSimInspiralChooseFDWaveform(
             /* Call the waveform driver routine */
             ret = XLALSimIMRPhenomAGenerateFD(hptilde, phiRef, deltaF, m1, m2,
                     f_min, f_max, r);
+            if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
             /* The above returns h(f) for optimal orientation (i=0, Fp=1, Fc=0)
              * To get generic polarizations we multiply by incl. dependence
              * and note hc(f) \propto I * hp(f)
@@ -2143,6 +2209,7 @@ int XLALSimInspiralChooseFDWaveform(
             ret = XLALSimInspiralSpinTaylorF2(hptilde, 0., phiRef, deltaF,
                     m1, m2, f_min, r, S1x, S1y, S1z,
                     LNhatx, LNhaty, LNhatz, phaseO, amplitudeO);
+            if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
             ret = XLALSimInspiralSpinTaylorF2(hctilde, LAL_PI/4.,phiRef, deltaF,
                     m1, m2, f_min, r, S1x, S1y, S1z,
                     LNhatx, LNhaty, LNhatz, phaseO, amplitudeO);
@@ -2172,6 +2239,7 @@ int XLALSimInspiralChooseFDWaveform(
             ret = XLALSimInspiralTaylorF2ReducedSpin(hptilde, phiRef, deltaF,
                     m1, m2, XLALSimIMRPhenomBComputeChi(m1, m2, S1z, S2z),
                     f_min, f_max, r, phaseO, amplitudeO);
+            if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
             /* The above returns h(f) for optimal orientation (i=0, Fp=1, Fc=0)
              * To get generic polarizations we multiply by incl. dependence
              * and note hc(f) \propto I * hp(f)
@@ -2197,6 +2265,7 @@ int XLALSimInspiralChooseFDWaveform(
             ret = XLALSimInspiralTaylorF2ReducedSpinTidal(hptilde,phiRef,deltaF,
                     m1, m2, XLALSimIMRPhenomBComputeChi(m1, m2, S1z, S2z),
                     lambda1, lambda2, f_min, f_max, r, phaseO, amplitudeO);
+            if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
             /* The above returns h(f) for optimal orientation (i=0, Fp=1, Fc=0)
              * To get generic polarizations we multiply by incl. dependence
              * and note hc(f) \propto I * hp(f)
@@ -2225,6 +2294,7 @@ int XLALSimInspiralChooseFDWaveform(
             ret = XLALSimIMRPhenomBGenerateFD(hptilde, phiRef, deltaF, m1, m2,
                     XLALSimIMRPhenomBComputeChi(m1, m2, S1z, S2z),
                     f_min, f_max, r);
+            if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
             /* The above returns h(f) for optimal orientation (i=0, Fp=1, Fc=0)
              * To get generic polarizations we multiply by incl. dependence
              * and note hc(f) \propto I * hp(f)
@@ -2252,6 +2322,7 @@ int XLALSimInspiralChooseFDWaveform(
             ret = XLALSimIMRPhenomCGenerateFD(hptilde, phiRef, deltaF, m1, m2,
                     XLALSimIMRPhenomBComputeChi(m1, m2, S1z, S2z),
                     f_min, f_max, r);
+            if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
             /* The above returns h(f) for optimal orientation (i=0, Fp=1, Fc=0)
              * To get generic polarizations we multiply by incl. dependence
              * and note hc(f) \propto I * hp(f)
@@ -2272,8 +2343,7 @@ int XLALSimInspiralChooseFDWaveform(
             XLAL_ERROR(XLAL_EINVAL);
     }
 
-    if (ret == XLAL_FAILURE)
-        XLAL_ERROR(XLAL_EFUNC);
+    if (ret == XLAL_FAILURE) XLAL_ERROR(XLAL_EFUNC);
 
     return ret;
 }
@@ -2283,6 +2353,9 @@ int XLALSimInspiralChooseFDWaveform(
  * Interface to compute a set of -2 spin-weighted spherical harmonic modes
  * for a binary inspiral of any available amplitude and phase PN order.
  * The phasing is computed with any of the TaylorT1, T2, T3, T4 methods.
+ *
+ * It can also return the (2,2), (2,1), (3,3), (4,4), (5,5) modes of the EOBNRv2
+ * model. Note that EOBNRv2 will ignore ampO, phaseO, lmax and f_ref arguments.
  */
 SphHarmTimeSeries *XLALSimInspiralChooseTDModes(
     REAL8 phiRef,                               /**< reference orbital phase (rad) */
@@ -2303,7 +2376,7 @@ SphHarmTimeSeries *XLALSimInspiralChooseTDModes(
     )
 {
     REAL8 v0 = 1.;
-    SphHarmTimeSeries *hlm;
+    SphHarmTimeSeries *hlm = NULL;
 
     /* General sanity checks that will abort */
     /*
@@ -2390,6 +2463,36 @@ SphHarmTimeSeries *XLALSimInspiralChooseTDModes(
                     XLALSimInspiralGetTidalOrder(waveFlags), amplitudeO,
                     phaseO, lmax);
             break;
+        case EOBNRv2:
+        case EOBNRv2HM:
+            /* Waveform-specific sanity checks */
+            if( !XLALSimInspiralFrameAxisIsDefault(
+                    XLALSimInspiralGetFrameAxis(waveFlags) ) )
+                ABORT_NONDEFAULT_FRAME_AXIS_NULL(waveFlags);
+            if( !XLALSimInspiralModesChoiceIsDefault(
+                    XLALSimInspiralGetModesChoice(waveFlags) ) )
+                ABORT_NONDEFAULT_MODES_CHOICE_NULL(waveFlags);
+            /* Call the waveform driver routine */
+            hlm = XLALSimIMREOBNRv2Modes(phiRef, deltaT, m1, m2, f_min, r);
+            // EOB driver only outputs modes with m>0, add m<0 modes by symmetry
+            size_t l, j;
+            int m;
+            for( l=2; l <= XLALSphHarmTimeSeriesGetMaxL( hlm ); l++ ) {
+                for( m=-l; m<0; m++){
+                    COMPLEX16TimeSeries* inmode = XLALSphHarmTimeSeriesGetMode(
+                            hlm, l, -m );
+                    if( !inmode ) continue;
+                    COMPLEX16TimeSeries* tmpmode = XLALCutCOMPLEX16TimeSeries(
+                            inmode, 0, inmode->data->length );
+                    for( j=0; j < tmpmode->data->length; j++ ){
+                        tmpmode->data->data[j] = cpow(-1, l)
+                            * conj( tmpmode->data->data[j] );
+                    }
+                    hlm = XLALSphHarmTimeSeriesAddMode( hlm, tmpmode, l, m );
+                    XLALDestroyCOMPLEX16TimeSeries( tmpmode );
+                }
+            }
+            break;
 
         default:
             XLALPrintError("Cannot generate modes for this approximant\n");
@@ -2427,6 +2530,7 @@ COMPLEX16TimeSeries *XLALSimInspiralChooseTDMode(
 {
     REAL8 v0 = 1.;
     COMPLEX16TimeSeries *hlm;
+    SphHarmTimeSeries *ts;
 
     /* General sanity checks that will abort */
     /*
@@ -2511,6 +2615,11 @@ COMPLEX16TimeSeries *XLALSimInspiralChooseTDMode(
                     XLALSimInspiralGetTidalOrder(waveFlags), amplitudeO,
                     phaseO, l, m);
             break;
+        case EOBNRv2:
+        case EOBNRv2HM:
+            ts = XLALSimIMREOBNRv2Modes(phiRef, deltaT, m1, m2, f_min, r);
+            hlm = XLALSphHarmTimeSeriesGetMode(ts, l, m);
+            break;
 
         default:
             XLALPrintError("Cannot generate modes for this approximant\n");
@@ -2545,6 +2654,7 @@ int XLALSimInspiralImplementedTDApproximants(
         case SpinTaylorT2:
         case SpinTaylorT4:
         case IMRPhenomB:
+        case PhenSpinTaylor:
         case PhenSpinTaylorRD:
         case SEOBNRv1:
             return 1;
@@ -2570,8 +2680,11 @@ int XLALSimInspiralImplementedFDApproximants(
         case IMRPhenomC:
         //case TaylorR2F4:
         case TaylorF2:
+<<<<<<< HEAD
         case TaylorF2Test:
         case PPE:
+=======
+>>>>>>> master
         case SpinTaylorF2:
         case TaylorF2RedSpin:
         case TaylorF2RedSpinTidal:
@@ -2621,13 +2734,13 @@ int XLALGetApproximantFromString(const CHAR *inString)
   {
     return TaylorR2F4;
   }
-  else if ( strstr(inString, "PhenSpinTaylorRDF" ) )
-  {
-    return PhenSpinTaylorRDF;
-  }
   else if ( strstr(inString, "PhenSpinTaylorRD" ) )
   {
     return PhenSpinTaylorRD;
+  }
+  else if ( strstr(inString, "PhenSpinTaylor" ) )
+  {
+    return PhenSpinTaylor;
   }
   else if ( strstr(inString, "SpinTaylorT2" ) )
   {
@@ -2798,14 +2911,17 @@ char* XLALGetStringFromApproximant(Approximant approximant)
       return strdup("TaylorF2RedSpin");
     case TaylorF2:
       return strdup("TaylorF2");
+<<<<<<< HEAD
     case TaylorF2Test:
       return strdup("TaylorF2Test");
     case PPE:
       return strdup("PPE");
+=======
+    case PhenSpinTaylor:
+      return strdup("PhenSpinTaylor");
+>>>>>>> master
     case TaylorR2F4:
       return strdup("TaylorR2F4");
-    case PhenSpinTaylorRDF:
-      return strdup("PhenSpinTaylorRDF");
     case PhenSpinTaylorRD:
       return strdup("PhenSpinTaylorRD");
     case SpinTaylorF2:
@@ -3024,30 +3140,45 @@ int XLALGetFrameAxisFromString(const CHAR *inString)
     return LAL_SIM_INSPIRAL_FRAME_AXIS_VIEW;
 }
 
-/** 
- * XLAL function to determine adaptive integration flag from a string.  Returns
- * 1 if string contains 'fixedStep', otherwise returns 0 to signal 
- * adaptive integration should be used.
+/**
+ * XLAL function to determine modes choice from a string.
  */
-int XLALGetAdaptiveIntFromString(const CHAR *inString) 
+int XLALGetHigherModesFromString(const CHAR *inString)
 {
-  if (strstr(inString, "fixedStep"))
-    return 1;
-  else 
+  if (strstr(inString, "L2"))
+    return LAL_SIM_INSPIRAL_MODES_CHOICE_RESTRICTED;
+  else if (strstr(inString, "L3"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_3L;
+  else if (strstr(inString, "L4"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_3L;
+  else if (strstr(inString, "L23"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_2AND3L;
+  else if (strstr(inString, "L24"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_2AND4L;
+  else if (strstr(inString, "L34"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_3AND4L;
+  else if (strstr(inString, "L234"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_2AND3AND4L;
+  else if (strstr(inString, "L5"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_5L;
+  else if (strstr(inString, "L25"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_2AND5L;
+  else if (strstr(inString, "L35"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_3AND5L;
+  else if (strstr(inString, "L45"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_4AND5L;
+  else if (strstr(inString, "L235"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_2AND3AND5L;
+  else if (strstr(inString, "L245"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_2AND4AND5L;
+  else if (strstr(inString, "L345"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_3AND4AND5L;
+  else if (strstr(inString, "ALL"))
+    return  LAL_SIM_INSPIRAL_MODES_CHOICE_ALL;
+  else {
+    XLALPrintError(" Error: invalid value %s for mode choice\n",inString);
     return 0;
-}
-
-/** 
- * XLAL function to determine inspiral-only flag from a string.  Returns
- * 1 if string contains 'inspiralOnly', otherwise returns 0 to signal 
- * full inspiral-merger-ringdown waveform should be generated.
- */
-int XLALGetInspiralOnlyFromString(const CHAR *inString)
-{
-  if (strstr(inString, "inspiralOnly"))
-    return 1;
-  else
-    return 0;
+  }
 }
 
 int XLALSimInspiralChooseTDWaveformFromCache(
@@ -3563,4 +3694,3 @@ static int StoreFDHCache(LALSimInspiralWaveformCache *cache,
 
   return XLAL_SUCCESS;
 }
-

@@ -53,7 +53,6 @@
 #define GPS2REAL8(gps) (1.0 * (gps).gpsSeconds + 1.e-9 * (gps).gpsNanoSeconds )
 
 // ----- global variables
-extern int lalDebugLevel;
 static REAL8 p,q,r;          /* binary time delay coefficients (need to be global so that the LAL root finding procedure can see them) */
 
 // initializers
@@ -75,12 +74,10 @@ main ( int argc, char *argv[] )
   LALStatus status = empty_LALStatus;
 
   /* read user input */
-  lalDebugLevel = 0;
   int opt;
   while ((opt = getopt( argc, argv, "v:" )) != -1) {
     switch (opt) {
     case 'v': /* set lalDebugLevel */
-      lalDebugLevel = atoi( optarg );
       break;
     default:
       XLAL_ERROR ( XLAL_EINVAL, "Invalid commandline-option '%c'\n", opt );
@@ -91,8 +88,8 @@ main ( int argc, char *argv[] )
   REAL8 startTimeREAL8 	= 714180733;
   REAL8 duration 	= 180000;	/* 50 hours */
   REAL8 Tsft 		= 1800;		/* assume 30min SFTs */
-  char earthEphem[] 	= DATADIR "earth00-19-DE200.dat.gz";
-  char sunEphem[]   	= DATADIR "sun00-19-DE200.dat.gz";
+  char earthEphem[] 	= TEST_DATA_DIR "earth00-19-DE200.dat.gz";
+  char sunEphem[]   	= TEST_DATA_DIR "sun00-19-DE200.dat.gz";
 
   //REAL8 tolerance = 2e-10;	/* same algorithm, should be basically identical results */
 
