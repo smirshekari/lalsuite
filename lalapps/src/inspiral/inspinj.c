@@ -112,9 +112,7 @@ REAL8 luminosity_distance(REAL8 rshift);
 REAL8 mean_time_step_sfr(REAL8 zmax, REAL8 rate_local);
 REAL8 drawRedshift(REAL8 zmin, REAL8 zmax, REAL8 pzmax);
 REAL8 redshift_mass(REAL8 mass, REAL8 z);
-
 REAL8 ComputePPEparameterFromLambdaG(REAL8 loglambdaG, REAL8 distance, REAL8 mchirp, REAL8 redshift);
-
 static void scale_lalsim_distance(SimInspiralTable *inj,char ** IFOnames, REAL8FrequencySeries **psds,REAL8 *start_freqs,LoudnessDistribution dDistr);
 static REAL8 draw_uniform_snr(REAL8 snrmin,REAL8 snrmax);
 static REAL8 draw_log10_snr(REAL8 snrmin,REAL8 snrmax);
@@ -206,7 +204,6 @@ INT4 writeSimRing = 0;
 LALSimInspiralApplyTaper taperInj = LAL_SIM_INSPIRAL_TAPER_NONE;
 AlignmentType alignInj = notAligned;
 REAL8 redshift;
-
 INT4 phiTestInjections=0;
 INT4 MGInjections = 0;
 INT4 BDinjections = 0;
