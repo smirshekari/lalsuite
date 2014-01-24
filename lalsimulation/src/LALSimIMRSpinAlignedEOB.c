@@ -1091,7 +1091,6 @@ int XLALSimIMRSpinEOBWaveform(
   memcpy( spin2, INspin2, 3*sizeof(REAL8));
   
   REAL8Vector *values = NULL;
-  
   /* Allocate the values vector to contain the ICs */
   /* For this model, it contains 12 dynamical variables: */
   /* values[0-2]  - x (Cartesian separation vector) */
@@ -1103,27 +1102,6 @@ int XLALSimIMRSpinEOBWaveform(
     XLAL_ERROR(  XLAL_ENOMEM );
   }
   memset( values->data, 0, values->length * sizeof( REAL8 ));
-
-#if 1
-  values->data[0] = 15.87;
-  values->data[1] = 0.;
-  values->data[2] = 0.;
-  values->data[3] = -0.000521675194648;
-  values->data[4] = 0.278174373488;
-  values->data[5] = -0.00012666165246;
-  values->data[6] = -0.270452950188;
-  values->data[7] = -0.216802131414;
-  values->data[8] = 0.00133043857763;
-  values->data[9] = 0.;
-  values->data[10] = 0.;
-  values->data[11] = 0.;
-
-  for( i = 0; i < 3; i++ )
-  {
-    spin1[i] = values->data[i+6];
-    spin2[i] = values->data[i+9];
-  }
-#endif
 
   /* EOB spin vectors used in the Hamiltonian */
   REAL8Vector *sigmaStar = NULL;
@@ -1234,8 +1212,8 @@ int XLALSimIMRSpinEOBWaveform(
   }
 
   /* Initialize parameters */
-  m1 = m1SI / LAL_MSUN_SI;
-  m2 = m2SI / LAL_MSUN_SI;
+  m1 = 25.0;//m1SI / LAL_MSUN_SI;
+  m2 = 5.0;//m2SI / LAL_MSUN_SI;
   mTotal = m1 + m2;
   mTScaled = mTotal * LAL_MTSUN_SI;
   eta    = m1 * m2 / (mTotal*mTotal);
@@ -1243,6 +1221,32 @@ int XLALSimIMRSpinEOBWaveform(
   amp0 = mTotal * LAL_MRSUN_SI / r;
   //amp0 = 4. * mTotal * LAL_MRSUN_SI * eta / r;
   
+#if 1
+  values->data[0] = 15.87;
+  values->data[1] = 0.;
+  values->data[2] = 0.;
+  values->data[3] = -0.000521675194648;
+  values->data[4] = 0.278174373488;
+  values->data[5] = -0.00012666165246;
+  values->data[6] = -0.270452950188;
+  values->data[7] = -0.216802131414;
+  values->data[8] = 0.00133043857763;
+  values->data[9] = 0.;
+  values->data[10] = 0.;
+  values->data[11] = 0.;
+
+  for( i = 0; i < 3; i++ )
+  {
+    /* Store the dimensionless chi vector, i.e. \vec{S}_i/m_i^2 */
+    spin1[i] = values->data[i+6];
+    spin2[i] = values->data[i+9];
+    
+    /* Spins being evolved, i.e. \vec{S}_i/M^2 */
+    values->data[i+6] *= m1*m1;///(mTotal*mTotal);
+    values->data[i+9] *= m2*m2;///(mTotal*mTotal);
+  }
+#endif
+
   /* TODO: Insert potentially necessary checks on the arguments */
 
   /* Calculate the time we will need to step back for ringdown */
@@ -1291,7 +1295,12 @@ int XLALSimIMRSpinEOBWaveform(
     s1DataNorm[i] = s1Data[i]/mTotal/mTotal;
     s2DataNorm[i] = s2Data[i]/mTotal/mTotal;
   }
-  
+ 
+  if( debugPK )
+  {
+    printf("Calculating SigmaStar\n");
+    fflush(NULL);
+  }
   /* Populate the initial structures */
   if ( XLALSimIMRSpinEOBCalculateSigmaStar( sigmaStar, m1, m2, 
                               &s1Vec, &s2Vec ) == XLAL_FAILURE )
@@ -1302,6 +1311,11 @@ int XLALSimIMRSpinEOBWaveform(
     XLAL_ERROR( XLAL_EFUNC );
   }
 
+  if( debugPK )
+  {
+    printf("Calculating SigmaKerr\n");
+    fflush(NULL);
+  }
   if ( XLALSimIMRSpinEOBCalculateSigmaKerr( sigmaKerr, m1, m2, 
                               &s1Vec, &s2Vec ) == XLAL_FAILURE )
   {
@@ -1337,7 +1351,7 @@ int XLALSimIMRSpinEOBWaveform(
 
   /* TODO: Insert potentially necessary checks on the arguments */
 
-  //seobParams.alignedSpins = 1;
+  seobParams.alignedSpins = 1;
   seobParams.tortoise     = 1;
   seobParams.sigmaStar    = sigmaStar;
   seobParams.sigmaKerr    = sigmaKerr;
@@ -1354,6 +1368,11 @@ int XLALSimIMRSpinEOBWaveform(
   /* Populate the initial structures                   */
   /* ************************************************* */
   /* Pre-compute the Hamiltonian coefficients */
+  if( debugPK )
+  {
+    printf("Populating the Hamiltonian Coefficients\n");
+    fflush(NULL);
+  }
   if ( XLALSimIMRCalculateSpinEOBHCoeffs( &seobCoeffs, eta, a, 
                           SpinAlignedEOBversion ) == XLAL_FAILURE )
   {
@@ -1364,6 +1383,11 @@ int XLALSimIMRSpinEOBWaveform(
   }
 
   /* Pre-compute the coefficients for the Newtonian factor of hLM */
+  if( debugPK )
+  {
+    printf("Populating the Newtonian Multipole Coefficients\n");
+    fflush(NULL);
+  }
   if ( XLALSimIMREOBComputeNewtonMultipolePrefixes( &prefixes, eobParams.m1,
 			eobParams.m2 ) == XLAL_FAILURE )
   {
@@ -1380,11 +1404,22 @@ int XLALSimIMRSpinEOBWaveform(
    * STEP 1) Solve for initial conditions
    */
 
-  if ( XLALSimIMRSpinEOBInitialConditions( values, m1, m2, fMin, inc, 
-							mSpin1, mSpin2, &seobParams ) == XLAL_FAILURE )
+  if( debugPK )
+  {
+    printf("Calling the XLALSimIMRSpinEOBInitialConditions function!\n");
+    fflush(NULL);
+  }
+  
+  REAL8 temp32;
+  temp32 = fMin * inc; temp32 *= 2;
+
+  /*
+  if ( XLALSimIMRSpinEOBInitialConditions( tmpValues2, m1, m2, fMin, inc,
+                	mSpin1, mSpin2, &seobParams ) == XLAL_FAILURE )
   {
     XLAL_ERROR( XLAL_EFUNC );
-  }
+  }*/
+  
   //exit(0);
   //YP::{x,y,z,px,py,pz,s1x,s1y,s1z,s2x,s2y,s2z} =
   //{15.87, 0, 0, -0.000521675194648, 0.278174373488, -0.00012666165246,
@@ -1403,7 +1438,7 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[10] =4.*m2*m2 * 6.938893903907228e-18;
   values->data[11] =4.*m2*m2 * -0.10606601717798211;
 #endif
-#if 1
+#if 0
   values->data[0] = 15.87;
   values->data[1] = 0.;
   values->data[2] = 0.;
@@ -1485,6 +1520,11 @@ int XLALSimIMRSpinEOBWaveform(
 #endif
   
   /* Pre-compute the non-spinning and spinning coefficients for hLM factors */
+  if( debugPK )
+  {
+    printf("Calling the XLALSimIMREOBCalcSpinFacWaveformCoefficients function to calculate Waveform Multipole Coefficients!\n");
+    fflush(NULL);
+  }
   if ( XLALSimIMREOBCalcSpinFacWaveformCoefficients( &hCoeffs, m1, m2, eta, 
         tplspin, chiS, chiA, SpinAlignedEOBversion ) == XLAL_FAILURE )
   {
@@ -1509,9 +1549,9 @@ int XLALSimIMRSpinEOBWaveform(
 			(double) mSpin1[0], (double) mSpin1[1], (double) mSpin1[2],
 			(double) mSpin2[0], (double) mSpin2[1], (double) mSpin2[2]);
 	  printf("s1Vec = {%lf,%lf,%lf}, s2Vec = {%lf,%lf,%lf}\n",
-			(double) seobParams.s1Vec->data[0], (double) seobParams.s1Vec->data[1],
-			(double) seobParams.s1Vec->data[2], (double) seobParams.s2Vec->data[0],
-			(double) seobParams.s2Vec->data[1], (double) seobParams.s2Vec->data[2]);
+	(double) seobParams.s1Vec->data[0], (double) seobParams.s1Vec->data[1],
+	(double) seobParams.s1Vec->data[2], (double) seobParams.s2Vec->data[0],
+	(double) seobParams.s2Vec->data[1], (double) seobParams.s2Vec->data[2]);
 	  printf("sigmaStar = {%lf,%lf,%lf}, sigmaKerr = {%lf,%lf,%lf}\n",
 			(double) sigmaStar->data[0], (double) sigmaStar->data[1], 
 			(double) sigmaStar->data[2], (double) sigmaKerr->data[0],
@@ -1519,12 +1559,13 @@ int XLALSimIMRSpinEOBWaveform(
 	  printf("a = %lf, tplspin = %lf, chiS = %lf, chiA = %lf\n", 
 			(double) a, (double) tplspin, (double) chiS, (double) chiA);
 	  printf("a is used to compute Hamiltonian coefficients,\n tplspin and chiS and chiA for the multipole coefficients\n");
+          fflush(NULL);
 	  
   } 
   
   /* Initialize the GSL integrator */
   if (!(integrator = XLALAdaptiveRungeKutta4Init(14, XLALSpinHcapNumericalDerivative,
-							XLALEOBSpinStopCondition, EPS_ABS, EPS_REL)))
+				XLALEOBSpinStopCondition, EPS_ABS, EPS_REL)))
   {
     XLALDestroyREAL8Vector( values );
     XLAL_ERROR( XLAL_EFUNC );
@@ -1533,7 +1574,7 @@ int XLALSimIMRSpinEOBWaveform(
   integrator->stopontestonly = 1;
 
   retLen = XLALAdaptiveRungeKutta4( integrator, &seobParams, values->data, 
-							0., 20./mTScaled, deltaT/mTScaled, &dynamics );
+				0., 20./mTScaled, deltaT/mTScaled, &dynamics );
   if ( retLen == XLAL_FAILURE )
   {
     XLAL_ERROR( XLAL_EFUNC );

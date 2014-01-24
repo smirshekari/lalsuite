@@ -63,6 +63,7 @@ tagSpinEOBHCoeffs
   double dheffSS;
   double dheffSSv2;
   UINT4    SpinAlignedEOBversion;
+  int      updateHCoeffs;
 }
 SpinEOBHCoeffs;
 
