@@ -110,8 +110,8 @@ static REAL8 XLALInspiralSpinFactorizedFlux(
   v = cbrt( omega );
   
   /* Update the factorized multipole coefficients, w.r.t. new spins */
-  if ( UsePrec )
-  {
+  if ( 0 )
+  {/*{{{*/
 	/* Assume that initial conditions are available at this point, to 
 	 * compute the chiS and chiA parameters. 
      * Calculate the values of chiS and chiA, as given in Eq.16 of 
@@ -168,7 +168,7 @@ static REAL8 XLALInspiralSpinFactorizedFlux(
 		XLALDestroyREAL8Vector( values );
 		XLAL_ERROR( XLAL_EFUNC );
 	}
-  }
+  }/*}}}*/
   
 //  printf( "v = %.16e\n", v );
   for ( l = 2; l <= lMax; l++ )
