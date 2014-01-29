@@ -273,7 +273,7 @@ static int XLALSpinHcapNumericalDerivative(
   r = polData[0] = sqrt( values[0]*values[0] + values[1]*values[1] + values[2]*values[2] );
   polData[1] = 0;
   polData[2] = values[0]*values[3] + values[1]*values[4] + values[2]*values[5];
-  polData[3] = magL / polData[0];
+  polData[3] = magL;// / polData[0];
 
   /* We need to re-calculate the parameters at each step as spins may not be constant */
   /* TODO: Modify so that only spin terms get re-calculated */
@@ -366,7 +366,8 @@ static int XLALSpinHcapNumericalDerivative(
 
   H = XLALSimIMRSpinEOBHamiltonian( eta, &rVec, &pVec, &s1norm, &s2norm, 
 	&sKerr, &sStar, params.params->tortoise, params.params->seobCoeffs ); 
-
+  H = H * (mass1 + mass2);
+  
   /* Now make the conversion */
   /* rDot */
   dvalues[0]  = tmpDValues[3];
@@ -477,12 +478,8 @@ static int XLALSpinHcapNumericalDerivative(
        (double) dvalues[4], (double) dvalues[5], (double) dvalues[6], (double) dvalues[7],
        (double) dvalues[8], (double) dvalues[9], (double) dvalues[10], (double) dvalues[11],
        (double) dvalues[12], (double) dvalues[13]);
-	
-	printf("Polar coordinates: {%.12e\t%.12e\t%.12e\t%.12e\n",
-		 (double) polData[0], (double) polData[1], (double) polData[2], 
-		 (double) polData[3]);
-	  
-	printf("Hamiltonian = %12.12lf, Flux = %12.12lf\n", H, flux);
+		  
+	printf("Hamiltonian = %12.12lf, Flux = %12.12lf, Omega = %12.12lf\n", H, flux, omega);
 
 #if 0 
 	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
