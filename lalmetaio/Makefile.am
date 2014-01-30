@@ -21,6 +21,8 @@ SUBDIRS = \
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = lalmetaio.pc
+noinst_DATA = lalmetaio-uninstalled.pc
+BUILT_SOURCES = lalmetaio-uninstalled.pc
 
 DISTCLEANFILES = config.lt
 
