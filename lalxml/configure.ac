@@ -1,25 +1,18 @@
 AC_PREREQ([2.63])
-AC_INIT([lalxml],[1.1.10.1],[lal-discuss@ligo.org])
-AC_CONFIG_HEADERS([src/config.h src/LALXMLConfig.h])
+AC_INIT([LALXML],[1.1.10.1],[lal-discuss@ligo.org])
+AC_CONFIG_HEADERS([src/config.h src/lal/LALXMLConfig.h])
 AC_CONFIG_SRCDIR([src/LALXML.c])
 AC_CONFIG_AUX_DIR([gnuscripts])
 AC_CONFIG_MACRO_DIR([gnuscripts])
 AC_CONFIG_FILES([ \
-  lalxml.spec \
-  lalxml.pc \
-  lalxml-uninstalled.pc \
   Makefile \
-  gnuscripts/Makefile \
-  debian/Makefile \
-  include/Makefile \
-  include/lal/Makefile \
-  src/Makefile \
-  python/Makefile \
+  lalxml-uninstalled.pc \
+  lalxml.pc \
+  lalxml.spec \
   python/__init__.py \
   swig/Makefile \
   swig/octave/Makefile \
   swig/python/Makefile \
-  test/Makefile
 ])
 AM_INIT_AUTOMAKE([1.11 foreign subdir-objects color-tests parallel-tests])
 
@@ -107,7 +100,7 @@ AC_CHECK_HEADERS([gsl/gsl_errno.h],,[AC_MSG_ERROR([could not find the gsl/gsl_er
 
 # check for lal libraries and headers
 LALSUITE_CHECK_LIB([LAL],[6.12.0],[LALVersion],[lal/LALStdio.h])
-LALSUITE_CHECK_LIB([LALSupport],[6.12.0],[LALOpenDataFile],[lal/FileIO.h])
+LALSUITE_CHECK_LIB([LALSupport],[6.12.0],[XLALCacheImport],[lal/LALCache.h])
 
 # configure SWIG wrapping modules
 LALSUITE_USE_SWIG([XLAL LAL])
@@ -120,12 +113,14 @@ LALSUITE_ADD_GCC_FLAGS
 # RedHat-derived systems.
 AC_SUBST([pkgpythondir], ["\${pkgpyexecdir}"])
 
-LAL_HEADER_LINK=${ac_aux_dir}/header-link.mk
-AC_SUBST_FILE([LAL_HEADER_LINK])
+# extra preprocessor flags
+LALSUITE_ADD_FLAGS([C],["-DPKG_DATA_DIR='\"\$(pkgdatadir)/\"'"])
+LALSUITE_ADD_FLAGS([C],["-DTEST_DATA_DIR='\"\$(abs_top_srcdir)/test/\"'"])
+LALSUITE_ADD_FLAGS([C],["-DTEST_OUTPUT_DIR='\"\$(abs_top_builddir)/test/\"'"])
 
 # output
 AC_OUTPUT
-echo "
+AC_MSG_NOTICE([
 ==================================================
 LALXML has now been successfully configured:
 
@@ -139,4 +134,4 @@ ${prefix}
 Now run 'make' to build LALXML,
 and run 'make install' to install LALXML.
 ==================================================
-"
+])

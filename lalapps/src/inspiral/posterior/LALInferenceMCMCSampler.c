@@ -251,6 +251,9 @@ computeMaxAutoCorrLen(LALInferenceRunState *runState, INT4 startCycle, INT4 endC
     max = Niter;
   }
 
+  /* Account for any thinning of the DE buffer that has happend */
+  max *= runState->differentialPointsSkip;
+
   *maxACL = (INT4)max;
 }
 
@@ -293,7 +296,6 @@ void PTMCMCAlgorithm(struct tagLALInferenceRunState *runState)
   REAL8 *ladder = NULL;			//the ladder
   REAL8 *annealDecay = NULL;
   INT4 parameter=0;
-  INT4 *intVec = NULL;
   INT4 annealStartIter = 0;
   INT4 iEffStart = 0;
   UINT4 hotChain = 0;                 // Affects proposal setup
@@ -375,7 +377,6 @@ void PTMCMCAlgorithm(struct tagLALInferenceRunState *runState)
   nChain = MPIsize;		//number of parallel chain
   ladder = malloc(nChain * sizeof(REAL8));                  // Array of temperatures for parallel tempering.
   annealDecay = malloc(nChain * sizeof(REAL8));           			// Used by annealing scheme
-  intVec = malloc(nChain * sizeof(INT4));
 
   /* If not specified otherwise, set effective sample size to total number of iterations */
   if (!Neff) {
