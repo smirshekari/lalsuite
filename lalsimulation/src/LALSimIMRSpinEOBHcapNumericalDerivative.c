@@ -244,7 +244,7 @@ static int XLALSpinHcapNumericalDerivative(
     }
     else
     {
-      params.params->seobCoeffs->updateHCoeffs = 0;
+      params.params->seobCoeffs->updateHCoeffs = 1;
       XLAL_CALLGSL( gslStatus = gsl_deriv_central( &F, values[i], 
                       STEP_SIZE, &tmpDValues[i], &absErr ) );
     }
@@ -449,6 +449,7 @@ static int XLALSpinHcapNumericalDerivative(
 
   if ( debugPK )
   {
+#if 0
     /* Print out all mass parameters */   
     printf("\nIn XLALSpinHcapNumericalDerivative:\n");
     printf("m1 = %12.12lf, m2 = %12.12lf, eta = %12.12lf\n", (double) mass1, 
@@ -480,15 +481,19 @@ static int XLALSpinHcapNumericalDerivative(
        (double) dvalues[12], (double) dvalues[13]);
 		  
 	printf("Hamiltonian = %12.12lf, Flux = %12.12lf, Omega = %12.12lf\n", H, flux, omega);
-
-#if 0 
-	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
+#endif
+#if 1
+	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
         (double) values[0], (double) values[1], (double) values[2], 
         (double) values[3], (double) values[4], (double) values[5], 
         (double) values[6], (double) values[7], (double) values[8], 
         (double) values[9], (double) values[10], (double) values[11],
+        (double) dvalues[0], (double) dvalues[1], (double) dvalues[2], 
+        (double) dvalues[3], (double) dvalues[4], (double) dvalues[5], 
+        (double) dvalues[6], (double) dvalues[7], (double) dvalues[8], 
+        (double) dvalues[9], (double) dvalues[10], (double) dvalues[11],
         (double) polData[0], (double) polData[1], (double) polData[2], 
-        (double) polData[3], H, flux);
+        (double) polData[3], H, flux, omega);
 #endif
     fflush(NULL);
   }
