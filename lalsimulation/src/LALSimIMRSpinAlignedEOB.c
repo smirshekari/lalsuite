@@ -1242,8 +1242,8 @@ int XLALSimIMRSpinEOBWaveform(
     spin2[i] = values->data[i+9];
     
     /* Spins being evolved, i.e. \vec{S}_i/M^2 */
-    //values->data[i+6] *= m1*m1/(mTotal*mTotal);
-    //values->data[i+9] *= m2*m2/(mTotal*mTotal);
+    values->data[i+6] *= m1*m1/(mTotal*mTotal);
+    values->data[i+9] *= m2*m2/(mTotal*mTotal);
   }
 #endif
 

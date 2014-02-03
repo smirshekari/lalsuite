@@ -390,7 +390,7 @@ static int XLALSpinHcapNumericalDerivative(
   pDotS2 = pData[0]*s2Data[0] + pData[1]*s2Data[1] + pData[2]*s2Data[2];
   rrTerm2 = 8./15. *eta*eta * pow(omega,8./3.)/(magL*magL*r) * ((61.+48.*mass2/mass1)*pDotS1 + (61.+48.*mass1/mass2)*pDotS2);
 
-  printf( "rrForce = %e %e %e\n", - flux * values[3] / (omega*magL), - flux * values[4] / (omega*magL), - flux * values[5] / (omega*magL)) ;
+  //printf( "rrForce = %e %e %e\n", - flux * values[3] / (omega*magL), - flux * values[4] / (omega*magL), - flux * values[5] / (omega*magL)) ;
 
   /* Now pDot */
   dvalues[3]  = - tmpDValues[0] - flux * values[3] / (omega*magL) + rrTerm2*Lx;
