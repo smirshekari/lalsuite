@@ -1237,7 +1237,20 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[9] = 0.;
   values->data[10] = 0.;
   values->data[11] = 0.;
-
+  
+  /*values->data[0] = 0.130208309399131;
+  values->data[1] = -7.60959058900954;
+  values->data[2] = -2.45855499735253;
+  values->data[3] = 0.430218830242973;
+  values->data[4] = 0.04291632558714;
+  values->data[5] = -0.0891018381333908;
+  values->data[6] = -0.337735482229554;
+  values->data[7] = -0.0292783444192628;
+  values->data[8] = 0.0722997424189602;
+  values->data[9] = 0.;
+  values->data[10] = 0.;
+  values->data[11] = 0.;*/
+  
   for( i = 0; i < 3; i++ )
   {
     /* Store the dimensionless chi vector, i.e. \vec{S}_i/m_i^2 */
@@ -1566,6 +1579,50 @@ int XLALSimIMRSpinEOBWaveform(
 	  
   } 
   
+  FILE *in  = fopen("/home/prayush/research/SEOBNRv2-3/DynDataMathematica.dat", "r" );
+  FILE *out = fopen( "/home/prayush/research/SEOBNRv2-3/TestDerivatives.dat", "w" );
+  double testValues[14], UNUSED testTime, UNUSED testDValues[14], UNUSED testH = 0., UNUSED testF = 0.;
+  while (!feof(in))
+  {
+	  if (fscanf(in, "%lf  %lf  %lf  %lf  %lf  %lf  %lf  %lf  %lf  %lf  %lf  %lf  %lf", &testTime,
+	  &testValues[0], &testValues[1], &testValues[2], &testValues[3], 
+	  &testValues[4], &testValues[5], &testValues[6], &testValues[7], 
+	  &testValues[8], &testValues[9], &testValues[10], &testValues[11] ) != 13)
+		break;
+
+	 for( i = 0; i < 3; i++ )
+	 {
+		 testValues[i+6] *= m1*m1/(mTotal*mTotal);
+		 testValues[i+6+3] *= m2*m2/(mTotal*mTotal);
+		 
+	 }
+		
+	 /*Compute stuff*/
+	 XLALSpinHcapNumericalDerivative( testTime, (REAL8*) testValues, 
+				(REAL8*) testDValues, (void*) &seobParams );
+	
+	 /*testH = XLALSimIMRSpinEOBHamiltonian( eta, &rVec, &pVec, 
+	  &s1norm, &s2norm, &sKerr, &sStar, seobParams.tortoise, seobParams.seobCoeffs ); 
+	 testH = testH * (mass1 + mass2);
+  
+	 testF  = XLALInspiralSpinFactorizedFlux( &polarDynamics, omega, &seobParams, H/(mass1+mass2), lMax, SpinAlignedEOBversion );
+	 testF /= eta;*/
+	  
+	 /*Write it*/
+	 fprintf(out, "%.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e\n", 
+	  testTime,
+	  testValues[0], testValues[1], testValues[2], testValues[3], 
+	  testValues[4], testValues[5], testValues[6], testValues[7], 
+	  testValues[8], testValues[9], testValues[10], testValues[11],
+	  testDValues[0], testDValues[1], testDValues[2], testDValues[3], 
+	  testDValues[4], testDValues[5], testDValues[6], testDValues[7], 
+	  testDValues[8], testDValues[9], testDValues[10], testDValues[11],
+	  testH, testF );
+ }
+ fclose( out );
+ fclose( in );
+
+
   /* Initialize the GSL integrator */
   if (!(integrator = XLALAdaptiveRungeKutta4Init(14, XLALSpinHcapNumericalDerivative,
 				XLALEOBSpinStopCondition, EPS_ABS, EPS_REL)))
@@ -1599,7 +1656,7 @@ int XLALSimIMRSpinEOBWaveform(
   REAL8 *s2Vecz = dynamics->data+12*retLen;
   REAL8 *vphi   = dynamics->data+13*retLen;
 
-  FILE *out = fopen( "seobDynamics.dat", "w" );
+   out = fopen( "seobDynamics.dat", "w" );
 
   for ( i = 0; i < retLen; i++ )
   {
