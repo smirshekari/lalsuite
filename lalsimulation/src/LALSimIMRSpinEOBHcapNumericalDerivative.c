@@ -292,8 +292,11 @@ static int XLALSpinHcapNumericalDerivative(
 
   for ( i = 0; i < 3; i++ )
   {
-     s1DataNorm[i] /= (mass1+mass2)*(mass1+mass2);
-     s2DataNorm[i] /= (mass1+mass2)*(mass1+mass2);
+	  s1Data[i] *= (mass1+mass2)*(mass1+mass2);
+	  s2Data[i] *= (mass1+mass2)*(mass1+mass2);
+	  
+	  //s1DataNorm[i] /= (mass1+mass2)*(mass1+mass2);
+      //s2DataNorm[i] /= (mass1+mass2)*(mass1+mass2);
   }
   //magS1 = sqrt(s1.data[0]*s1.data[0] + s1.data[1]*s1.data[1] + s1.data[2]*s1.data[2]);
   //magS2 = sqrt(s2.data[0]*s2.data[0] + s2.data[1]*s2.data[1] + s2.data[2]*s2.data[2]);
@@ -352,8 +355,9 @@ static int XLALSpinHcapNumericalDerivative(
   params.params->sigmaKerr = &sKerr;
   params.params->a         = a;
  
-  XLALSimIMREOBCalcSpinFacWaveformCoefficients( params.params->eobParams->hCoeffs,
-      mass1, mass2, eta, tplspin, chiS, chiA, SpinAlignedEOBversion );
+  XLALSimIMREOBCalcSpinFacWaveformCoefficients( 
+		params.params->eobParams->hCoeffs, mass1, mass2, eta, tplspin, 
+		chiS, chiA, SpinAlignedEOBversion );
   XLALSimIMRCalculateSpinEOBHCoeffs( params.params->seobCoeffs, eta, a, 
       SpinAlignedEOBversion );
 
