@@ -134,7 +134,8 @@ static int XLALSpinHcapNumericalDerivative(
   REAL8       s1Data[3], s2Data[3], s1DataNorm[3], s2DataNorm[3];
   REAL8       sKerrData[3], sStarData[3];
   REAL8 /*magS1, magS2,*/ chiS, chiA, a, tplspin;
-  REAL8 rcrossp[3], rcrosspMag, s1dotL, s2dotL;
+  REAL8	UNUSED s1dotL, s2dotL;
+  REAL8	UNUSED	  rcrossrDot[3], rcrossrDotMag, s1dotLN, s2dotLN;
 
 
   /* Orbital angular momentum */
@@ -270,12 +271,15 @@ static int XLALSpinHcapNumericalDerivative(
   polarDynamics.length = 4;
   polarDynamics.data   = polData;
 
-  r = polData[0] = sqrt( values[0]*values[0] + values[1]*values[1] + values[2]*values[2] );
+  r = polData[0] = sqrt( values[0]*values[0] + values[1]*values[1] 
+						+ values[2]*values[2] );
   polData[1] = 0;
-  polData[2] = values[0]*values[3] + values[1]*values[4] + values[2]*values[5];
-  polData[3] = magL;// / polData[0];
+  polData[2] = (values[0]*values[3] + values[1]*values[4] 
+				+ values[2]*values[5]) / polData[0];
+  polData[3] = magL;
 
-  /* We need to re-calculate the parameters at each step as spins may not be constant */
+  /* We need to re-calculate the parameters at each step as precessing
+   * spins will not be constant */
   /* TODO: Modify so that only spin terms get re-calculated */
 
   /* We cannot point to the values vector directly as it leads to a warning */
@@ -294,31 +298,31 @@ static int XLALSpinHcapNumericalDerivative(
   {
 	  s1Data[i] *= (mass1+mass2)*(mass1+mass2);
 	  s2Data[i] *= (mass1+mass2)*(mass1+mass2);
-	  
-	  //s1DataNorm[i] /= (mass1+mass2)*(mass1+mass2);
-      //s2DataNorm[i] /= (mass1+mass2)*(mass1+mass2);
   }
-  //magS1 = sqrt(s1.data[0]*s1.data[0] + s1.data[1]*s1.data[1] + s1.data[2]*s1.data[2]);
-  //magS2 = sqrt(s2.data[0]*s2.data[0] + s2.data[1]*s2.data[1] + s2.data[2]*s2.data[2]);
 
-  //chiS = 0.5 * ( magS1 / (mass1*mass1) + magS2 / (mass2*mass2) );
-  //chiA = 0.5 * ( magS1 / (mass1*mass1) - magS2 / (mass2*mass2) );
+  /*Compute \vec{S_i} \dot \vec{L}	*/
+  s1dotL = (s1Data[0]*Lhatx + s1Data[1]*Lhaty + s1Data[2]*Lhatz)
+			/ (mass1*mass1);
+  s2dotL = (s2Data[0]*Lhatx + s2Data[1]*Lhaty + s2Data[2]*Lhatz)
+			/ (mass2*mass2);
 
-  rcrossp[0] = values[1]*values[5] - values[2]*values[4];
-  rcrossp[1] = values[2]*values[3] - values[0]*values[5];
-  rcrossp[2] = values[0]*values[4] - values[1]*values[3];
-  rcrosspMag = sqrt(rcrossp[0]*rcrossp[0] + rcrossp[1]*rcrossp[1] +
-        rcrossp[2]*rcrossp[2]);
+  /*Compute \vec{L_N} = \vec{r} \times \.{\vec{r}}, 
+   * \vec{S_i} \dot \vec{L_N} and chiS and chiA		*/
+  rcrossrDot[0] = values[1]*tmpDValues[5] - values[2]*tmpDValues[4];
+  rcrossrDot[1] = values[2]*tmpDValues[3] - values[0]*tmpDValues[5];
+  rcrossrDot[2] = values[0]*tmpDValues[4] - values[1]*tmpDValues[3];
+  rcrossrDotMag = sqrt( rcrossrDot[0]*rcrossrDot[0] 
+		+ rcrossrDot[1]*rcrossrDot[1]	+ rcrossrDot[2]*rcrossrDot[2] );
 
-  rcrossp[0] /= rcrosspMag;
-  rcrossp[1] /= rcrosspMag;
-  rcrossp[2] /= rcrosspMag;
-
-  s1dotL = (s1Data[0]*rcrossp[0] + s1Data[1]*rcrossp[1] + s1Data[2]*rcrossp[2])
-    / (mass1*mass1);
-  s2dotL = (s2Data[0]*rcrossp[0] + s2Data[1]*rcrossp[1] + s2Data[2]*rcrossp[2])
-    / (mass2*mass2);
-
+  rcrossrDot[0] /= rcrossrDotMag;
+  rcrossrDot[1] /= rcrossrDotMag;
+  rcrossrDot[2] /= rcrossrDotMag;
+  
+  s1dotLN = (s1Data[0]*rcrossrDot[0] + s1Data[1]*rcrossrDot[1] 
+							+ s1Data[2]*rcrossrDot[2]) / (mass1*mass1);
+  s2dotLN = (s2Data[0]*rcrossrDot[0] + s2Data[1]*rcrossrDot[1] 
+							+ s2Data[2]*rcrossrDot[2]) / (mass1*mass1);
+ 
   chiS = 0.5 * (s1dotL + s2dotL);
   chiA = 0.5 * (s1dotL - s2dotL);
 
@@ -404,14 +408,14 @@ static int XLALSpinHcapNumericalDerivative(
   /* spin1 */
   //printf( "Raw spin1 derivatives = %e %e %e\n", tmpDValues[6], tmpDValues[7], tmpDValues[8] );
   //printf( "Raw spin2 derivatives = %e %e %e\n", tmpDValues[9], tmpDValues[10], tmpDValues[11] );
-  dvalues[6]  = mass1 * mass2 * (tmpDValues[7]*values[8] - tmpDValues[8]*values[7]);
-  dvalues[7]  = mass1 * mass2 * (tmpDValues[8]*values[6] - tmpDValues[6]*values[8]);
-  dvalues[8]  = mass1 * mass2 * (tmpDValues[6]*values[7] - tmpDValues[7]*values[6]);
+  dvalues[6]  = mass1 * mass1 * eta * (tmpDValues[7]*values[8] - tmpDValues[8]*values[7]);
+  dvalues[7]  = mass1 * mass1 * eta * (tmpDValues[8]*values[6] - tmpDValues[6]*values[8]);
+  dvalues[8]  = mass1 * mass1 * eta * (tmpDValues[6]*values[7] - tmpDValues[7]*values[6]);
 
   /* spin2 */
-  dvalues[9]  = mass1 * mass2 * (tmpDValues[10]*values[11] - tmpDValues[11]*values[10]);
-  dvalues[10] = mass1 * mass2 * (tmpDValues[11]*values[9] - tmpDValues[9]*values[11]);
-  dvalues[11] = mass1 * mass2 * (tmpDValues[9]*values[10] - tmpDValues[10]*values[9]);
+  dvalues[9]  = mass2 * mass2 * eta * (tmpDValues[10]*values[11] - tmpDValues[11]*values[10]);
+  dvalues[10] = mass2 * mass2 * eta * (tmpDValues[11]*values[9] - tmpDValues[9]*values[11]);
+  dvalues[11] = mass2 * mass2 * eta * (tmpDValues[9]*values[10] - tmpDValues[10]*values[9]);
 
   /* phase and precessing bit */
   dLx = dvalues[1]*values[5] - dvalues[2]*values[4]
