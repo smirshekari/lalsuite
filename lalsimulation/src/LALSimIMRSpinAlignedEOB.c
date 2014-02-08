@@ -1226,7 +1226,20 @@ int XLALSimIMRSpinEOBWaveform(
   //amp0 = 4. * mTotal * LAL_MRSUN_SI * eta / r;
   
 #if 1
-  values->data[0] = 15.87;
+  values->data[0] = 19.9;
+  values->data[1] = -1.04337949716e-22;
+  values->data[2] = -5.04250029413e-19;
+  values->data[3] = -0.000201238161271;
+  values->data[4] = 0.24386594182;
+  values->data[5] = -0.000100920067298;
+  values->data[6] = 0.26796875;
+  values->data[7] = 0.30625;
+  values->data[8] = -0.0765625000004;
+  values->data[9] = -0.009375;
+  values->data[10] = -0.00156249999995;
+  values->data[11] = -0.00156250000004;
+
+  /*values->data[0] = 15.87;
   values->data[1] = 0.;
   values->data[2] = 0.;
   values->data[3] = -0.000521675194648;
@@ -1237,7 +1250,7 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[8] = 0.00133043857763;
   values->data[9] = 0.;
   values->data[10] = 0.;
-  values->data[11] = 0.;
+  values->data[11] = 0.;*/
   
   /*values->data[0] = 0.130208309399131;
   values->data[1] = -7.60959058900954;
@@ -1594,8 +1607,7 @@ int XLALSimIMRSpinEOBWaveform(
 	 for( i = 0; i < 3; i++ )
 	 {
 		 testValues[i+6] *= m1*m1/(mTotal*mTotal);
-		 testValues[i+6+3] *= m2*m2/(mTotal*mTotal);
-		 
+		 testValues[i+6+3] *= m2*m2/(mTotal*mTotal); 
 	 }
 		
 	 /*Compute stuff*/
@@ -1610,15 +1622,15 @@ int XLALSimIMRSpinEOBWaveform(
 	 testF /= eta;*/
 	  
 	 /*Write it*/
-	 fprintf(out, "%.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e\n", 
+	 fprintf(out, "%.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e\n", 
 	  testTime,
 	  testValues[0], testValues[1], testValues[2], testValues[3], 
 	  testValues[4], testValues[5], testValues[6], testValues[7], 
 	  testValues[8], testValues[9], testValues[10], testValues[11],
 	  testDValues[0], testDValues[1], testDValues[2], testDValues[3], 
 	  testDValues[4], testDValues[5], testDValues[6], testDValues[7], 
-	  testDValues[8], testDValues[9], testDValues[10], testDValues[11],
-	  testH, testF );
+	  testDValues[8], testDValues[9], testDValues[10], testDValues[11]
+	   );
  }
  fclose( out );
  fclose( in );
@@ -1664,13 +1676,17 @@ int XLALSimIMRSpinEOBWaveform(
   REAL8 *s2Vecy = dynamics->data+11*retLen;
   REAL8 *s2Vecz = dynamics->data+12*retLen;
   REAL8 *vphi   = dynamics->data+13*retLen;
+  REAL8 *phpart2= dynamics->data+14*retLen;
 
    out = fopen( "seobDynamics.dat", "w" );
 
   for ( i = 0; i < retLen; i++ )
   {
-    fprintf( out, "%.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e\n", i*deltaT/mTScaled, posVecx[i], posVecy[i], posVecz[i], momVecx[i], momVecy[i], momVecz[i],
-              s1Vecx[i]/(4.*m1*m1), s1Vecy[i]/(4.*m1*m1), s1Vecz[i]/(4.*m1*m1), s2Vecx[i]/(4.*m2*m2), s2Vecy[i]/(4.*m2*m2), s2Vecz[i]/(4.*m2*m2) );
+    fprintf( out, "%.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e\n", 
+    i*deltaT/mTScaled, 
+    posVecx[i], posVecy[i], posVecz[i], momVecx[i], momVecy[i], momVecz[i],
+    s1Vecx[i], s1Vecy[i], s1Vecz[i], s2Vecx[i], s2Vecy[i], s2Vecz[i],
+    vphi[i]+phpart2[i] );
   }
   fclose( out );
 
