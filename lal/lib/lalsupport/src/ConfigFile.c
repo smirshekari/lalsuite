@@ -66,22 +66,21 @@ static void cleanConfig ( char *text );
  */
 int
 XLALParseDataFile (LALParsedDataFile **cfgdata, /**< [out] pre-parsed data-file lines */
-                   const CHAR *fname)		/**< [in] name of config-file to be read */
+                   const CHAR *path		/**< [in] file-path of config-file to be read */
+                   )
 {
   XLAL_CHECK ( (cfgdata != NULL) && (*cfgdata == NULL), XLAL_EINVAL );
-  XLAL_CHECK ( fname != NULL, XLAL_EINVAL );
+  XLAL_CHECK ( path != NULL, XLAL_EINVAL );
 
-  FILE *fp;
-  XLAL_CHECK ( (fp = LALOpenDataFile (fname)) != NULL, XLAL_EIO );
+  char *dataBuffer;
+  XLAL_CHECK ( (dataBuffer = XLALFileLoad ( path )) != NULL, XLAL_EFUNC );
 
-  CHARSequence *rawdata = NULL;
-  int err = XLALCHARReadSequence (&rawdata, fp);	// this function can read gzip-compressed files
-  fclose (fp);
-  XLAL_CHECK ( err == 0, XLAL_EFAILED, "XLALCHARReadSequence() failed with err = %d\n", err );
+  if ( XLALParseDataFileContent ( cfgdata, dataBuffer ) != XLAL_SUCCESS ) {
+    XLALFree ( dataBuffer );
+    XLAL_ERROR ( XLAL_EFUNC );
+  }
 
-  XLAL_CHECK ( XLALParseDataFileContent ( cfgdata, rawdata->data ) == XLAL_SUCCESS, XLAL_EFUNC );
-
-  XLALDestroyCHARVector ( rawdata );
+  XLALFree ( dataBuffer );
 
   return XLAL_SUCCESS;
 
@@ -312,7 +311,7 @@ XLALReadConfigVariable ( void *varp,                      /**< [out] result gets
       XLAL_ERROR ( XLAL_EINVAL );
     }
 
-  if (cfgdata->wasRead == NULL)
+  if ( (cfgdata->lines->nTokens > 0) && (cfgdata->wasRead == NULL) )
     {
       XLALPrintError ( "%s:" CONFIGFILEH_MSGENULL, __func__ );
       XLAL_ERROR ( XLAL_EINVAL );
@@ -710,7 +709,7 @@ XLALCheckConfigReadComplete (const LALParsedDataFile *cfgdata,  /**< [in] config
       XLALPrintError ("%s:" CONFIGFILEH_MSGENULL, __func__ );
       XLAL_ERROR ( XLAL_EINVAL );
     }
-  if (cfgdata->wasRead == NULL)
+  if ( (cfgdata->lines->nTokens > 0) && (cfgdata->wasRead == NULL) )
     {
       XLALPrintError ("%s:" CONFIGFILEH_MSGENULL, __func__ );
       XLAL_ERROR ( XLAL_EINVAL );

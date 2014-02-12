@@ -1131,12 +1131,14 @@ static int XLALSimIMREOBCalcSpinFacWaveformCoefficients(
           const REAL8               m1,     /**< mass 1 */
           const REAL8               m2,     /**< mass 2 */
           const REAL8               eta,    /**< symmetric mass ratio */
-          const REAL8               a,      /**< Kerr spin parameter for test-particle terms */
+          const REAL8               tmpa,   /**< Kerr spin parameter for test-particle terms */
           const REAL8               chiS,   /**< (chi1+chi2)/2 */
           const REAL8               chiA,   /**< (chi1-chi2)/2 */
           const UINT4               SpinAlignedEOBversion  /**< 1 for SEOBNRv1; 2 for SEOBNRv2 */
           )
 {
+  printf("Renewing hlm coefficients.\n");
+  REAL8 a = tmpa * 0;
   REAL8 eta2 = eta*eta;
   REAL8 eta3 = eta2 * eta;
 

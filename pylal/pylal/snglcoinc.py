@@ -604,9 +604,9 @@ class TimeSlideGraph(object):
 	def get_coincs(self, eventlists, event_comparefunc, thresholds, include_small_coincs = True, verbose = False):
 		if verbose:
 			print >>sys.stderr, "constructing coincs for target offset vectors ..."
-		for n, node in enumerate(self.head):
+		for n, node in enumerate(self.head, start = 1):
 			if verbose:
-				print >>sys.stderr, "%d/%d: %s" % (n + 1, len(self.head), str(node.offset_vector))
+				print >>sys.stderr, "%d/%d: %s" % (n, len(self.head), str(node.offset_vector))
 			if include_small_coincs:
 				# note that unused_coincs must be retrieved
 				# after the call to .get_coincs() because
@@ -654,7 +654,7 @@ class CoincTables(object):
 	def __init__(self, xmldoc):
 		# find the coinc table or create one if not found
 		try:
-			self.coinctable = table.get_table(xmldoc, lsctables.CoincTable.tableName)
+			self.coinctable = lsctables.CoincTable.get_table(xmldoc)
 		except ValueError:
 			self.coinctable = lsctables.New(lsctables.CoincTable)
 			xmldoc.childNodes[0].appendChild(self.coinctable)
@@ -662,13 +662,13 @@ class CoincTables(object):
 
 		# find the coinc_map table or create one if not found
 		try:
-			self.coincmaptable = table.get_table(xmldoc, lsctables.CoincMapTable.tableName)
+			self.coincmaptable = lsctables.CoincMapTable.get_table(xmldoc)
 		except ValueError:
 			self.coincmaptable = lsctables.New(lsctables.CoincMapTable)
 			xmldoc.childNodes[0].appendChild(self.coincmaptable)
 
 		# find the time_slide table
-		self.time_slide_table = table.get_table(xmldoc, lsctables.TimeSlideTable.tableName)
+		self.time_slide_table = lsctables.TimeSlideTable.get_table(xmldoc)
 		self.time_slide_index = self.time_slide_table.as_dict()
 
 		# cast all offsets to LIGOTimeGPS for reversable arithmetic
@@ -1119,6 +1119,7 @@ class CoincSynthesizer(object):
 		# normalize (should be already, just be certain)
 		#
 
+		assert abs(P[-1][0] - 1.0) < 1e-14
 		for i in range(len(P)):
 			P[i][0] /= P[-1][0]
 		assert P[-1][0] == 1.0
