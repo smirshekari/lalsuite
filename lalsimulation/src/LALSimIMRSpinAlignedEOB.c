@@ -1681,8 +1681,7 @@ int XLALSimIMRSpinEOBWaveform(
   REAL8 *vphi   = dynamics->data+13*retLen;
   REAL8 *phpart2= dynamics->data+14*retLen;
 
-   out = fopen( "seobDynamics.dat", "w" );
-
+  out = fopen( "seobDynamics.dat", "w" );
   for ( i = 0; i < retLen; i++ )
   {
     fprintf( out, "%.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e\n", 
