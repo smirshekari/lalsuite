@@ -183,7 +183,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
 
   /* Spin gauge parameters. (YP) simplified, since both are zero. */
   // static const double aa=0., bb=0.;
-
+/*
   printf( "In Hamiltonian:\n" );
   printf( "x = %.16e\t%.16e\t%.16e\n", x->data[0], x->data[1], x->data[2] );
   printf( "p = %.16e\t%.16e\t%.16e\n", p->data[0], p->data[1], p->data[2] );
@@ -191,7 +191,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
 		sigmaStar->data[1], sigmaStar->data[2] );
   printf( "sKerr = %.16e\t%.16e\t%.16e\n", sigmaKerr->data[0], 
 		sigmaKerr->data[1], sigmaKerr->data[2] );
-  
+  */
 
   r2 = x->data[0]*x->data[0] + x->data[1]*x->data[1] + x->data[2]*x->data[2];
   r  = sqrt(r2);

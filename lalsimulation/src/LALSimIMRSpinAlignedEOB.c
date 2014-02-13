@@ -1087,7 +1087,7 @@ int XLALSimIMRSpinEOBWaveform(
   LIGOTimeGPS tc = LIGOTIMEGPSZERO;
   
   /* Fix the underlying aligned spin EOB model */
-  INT4 SpinAlignedEOBversion = 2;
+  INT4 SpinAlignedEOBversion = 1;
 
   /* Vector to store the initial parameters */
   REAL8 spin1[3], spin2[3];
@@ -1223,7 +1223,9 @@ int XLALSimIMRSpinEOBWaveform(
   eta    = m1 * m2 / (mTotal*mTotal);
 
   amp0 = mTotal * LAL_MRSUN_SI / r;
+  //amp0 = 4. * mTotal * LAL_MRSUN_SI * eta / r;
   
+#if 1
   /*
   values->data[0] = 19.9;
   values->data[1] = -1.04337949716e-22;
@@ -1238,7 +1240,7 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[10] = -0.00156249999995;
   values->data[11] = -0.00156250000004;*/
 
-  /*values->data[0] = 15.87;
+  values->data[0] = 15.87;
   values->data[1] = 0.;
   values->data[2] = 0.;
   values->data[3] = -0.000521675194648;
@@ -1249,9 +1251,9 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[8] = 0.00133043857763;
   values->data[9] = 0.;
   values->data[10] = 0.;
-  values->data[11] = 0.;*/
+  values->data[11] = 0.;
   
-  values->data[0] = 0.130208309399131;
+  /*values->data[0] = 0.130208309399131;
   values->data[1] = -7.60959058900954;
   values->data[2] = -2.45855499735253;
   values->data[3] = 0.430218830242973;
@@ -1262,7 +1264,8 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[8] = 0.0722997424189602;
   values->data[9] = 0.;
   values->data[10] = 0.;
-  values->data[11] = 0.;
+  values->data[11] = 0.;*/
+#endif
   
   for( i = 0; i < 3; i++ )
   {
