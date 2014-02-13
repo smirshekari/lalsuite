@@ -1087,7 +1087,7 @@ int XLALSimIMRSpinEOBWaveform(
   LIGOTimeGPS tc = LIGOTIMEGPSZERO;
   
   /* Fix the underlying aligned spin EOB model */
-  INT4 SpinAlignedEOBversion = 1;
+  INT4 SpinAlignedEOBversion = 2;
 
   /* Vector to store the initial parameters */
   REAL8 spin1[3], spin2[3];
@@ -1223,9 +1223,8 @@ int XLALSimIMRSpinEOBWaveform(
   eta    = m1 * m2 / (mTotal*mTotal);
 
   amp0 = mTotal * LAL_MRSUN_SI / r;
-  //amp0 = 4. * mTotal * LAL_MRSUN_SI * eta / r;
   
-#if 1
+  /*
   values->data[0] = 19.9;
   values->data[1] = -1.04337949716e-22;
   values->data[2] = -5.04250029413e-19;
@@ -1237,7 +1236,7 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[8] = -0.0765625000004;
   values->data[9] = -0.009375;
   values->data[10] = -0.00156249999995;
-  values->data[11] = -0.00156250000004;
+  values->data[11] = -0.00156250000004;*/
 
   /*values->data[0] = 15.87;
   values->data[1] = 0.;
@@ -1252,7 +1251,7 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[10] = 0.;
   values->data[11] = 0.;*/
   
-  /*values->data[0] = 0.130208309399131;
+  values->data[0] = 0.130208309399131;
   values->data[1] = -7.60959058900954;
   values->data[2] = -2.45855499735253;
   values->data[3] = 0.430218830242973;
@@ -1263,7 +1262,7 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[8] = 0.0722997424189602;
   values->data[9] = 0.;
   values->data[10] = 0.;
-  values->data[11] = 0.;*/
+  values->data[11] = 0.;
   
   for( i = 0; i < 3; i++ )
   {
@@ -1275,7 +1274,6 @@ int XLALSimIMRSpinEOBWaveform(
     values->data[i+6] *= m1*m1/(mTotal*mTotal);
     values->data[i+9] *= m2*m2/(mTotal*mTotal);
   }
-#endif
 
   /* TODO: Insert potentially necessary checks on the arguments */
 
@@ -1590,11 +1588,10 @@ int XLALSimIMRSpinEOBWaveform(
 			(double) a, (double) tplspin, (double) chiS, (double) chiA);
 	  printf("a is used to compute Hamiltonian coefficients,\n tplspin and chiS and chiA for the multipole coefficients\n");
           fflush(NULL);
-	  
   } 
   
-  FILE *in  = fopen("/home/prayush/research/SEOBNRv2-3/DynDataMathematica.dat", "r" );
-  FILE *out = fopen( "/home/prayush/research/SEOBNRv2-3/TestDerivatives.dat", "w" );
+  FILE *in  = fopen("/home/prayush/research/SEOBNRv2-3/case1q5/DynDataMathematica.dat", "r" );
+  FILE *out = fopen( "/home/prayush/research/SEOBNRv2-3/case1q5/TestDerivatives.dat", "w" );
   double testValues[14], UNUSED testTime, UNUSED testDValues[14], UNUSED testH = 0., UNUSED testF = 0.;
   while (!feof(in))
   {
@@ -1645,7 +1642,13 @@ int XLALSimIMRSpinEOBWaveform(
   }
 
   integrator->stopontestonly = 1;
-
+  for( i = 0; i < 3; i++ )
+  {
+	if( debugPK )
+		printf("\n r = {%f,%f,%f}\n", values->data[0], values->data[1],
+										values->data[2]);
+	fflush(NULL);
+}
   retLen = XLALAdaptiveRungeKutta4( integrator, &seobParams, values->data, 
 				0., 20./mTScaled, deltaT/mTScaled, &dynamics );
   if ( retLen == XLAL_FAILURE )

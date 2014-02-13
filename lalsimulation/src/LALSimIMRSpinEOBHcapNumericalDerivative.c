@@ -491,17 +491,21 @@ static int XLALSpinHcapNumericalDerivative(
 	printf("Hamiltonian = %12.12lf, Flux = %12.12lf, Omega = %12.12lf\n", H, flux, omega);
 #endif
 #if 1
+	REAL8 sscaling1 = (mass1+mass2)*(mass1+mass2)/(mass1*mass1);
+	REAL8 sscaling2 = (mass1+mass2)*(mass1+mass2)/(mass2*mass2);
 	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
         (double) values[0], (double) values[1], (double) values[2], 
         (double) values[3], (double) values[4], (double) values[5], 
-        (double) values[6], (double) values[7], (double) values[8], 
-        (double) values[9], (double) values[10], (double) values[11],
+        (double) sscaling1*values[6], (double) sscaling1*values[7], 
+        (double) sscaling1*values[8], (double) sscaling2*values[9],
+        (double) sscaling2*values[10], (double) sscaling2*values[11],
         (double) dvalues[0], (double) dvalues[1], (double) dvalues[2], 
         (double) dvalues[3], (double) dvalues[4], (double) dvalues[5], 
-        (double) dvalues[6], (double) dvalues[7], (double) dvalues[8], 
-        (double) dvalues[9], (double) dvalues[10], (double) dvalues[11],
+        (double) sscaling1*dvalues[6], (double) sscaling1*dvalues[7], 
+        (double) sscaling1*dvalues[8], (double) sscaling2*dvalues[9], 
+        (double) sscaling2*dvalues[10], (double) sscaling2*dvalues[11],
         (double) polData[0], (double) polData[1], (double) polData[2], 
-        (double) polData[3], H, flux, omega);
+        (double) polData[3], H/(mass1+mass2), flux*eta, omega);
 #endif
     fflush(NULL);
   }
