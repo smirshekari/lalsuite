@@ -256,6 +256,21 @@ static int XLALSpinHcapNumericalDerivative(
     }
   }
 
+	REAL8 sscaling1 = (mass1+mass2)*(mass1+mass2)/(mass1*mass1);
+	REAL8 sscaling2 = (mass1+mass2)*(mass1+mass2)/(mass2*mass2);
+
+	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
+        (double) values[0], (double) values[1], (double) values[2], 
+        (double) values[3], (double) values[4], (double) values[5], 
+        (double) sscaling1*values[6], (double) sscaling1*values[7], 
+        (double) sscaling1*values[8], (double) sscaling2*values[9],
+        (double) sscaling2*values[10], (double) sscaling2*values[11],
+        (double) tmpDValues[0], (double) tmpDValues[1], (double) tmpDValues[2], 
+        (double) tmpDValues[3], (double) tmpDValues[4], (double) tmpDValues[5], 
+        (double) tmpDValues[6], (double) tmpDValues[7], 
+        (double) tmpDValues[8], (double) tmpDValues[9], 
+        (double) tmpDValues[10], (double) tmpDValues[11]);
+
   /* Calculate the orbital angular momentum */
   Lx = values[1]*values[5] - values[2]*values[4];
   Ly = values[2]*values[3] - values[0]*values[5];
@@ -491,8 +506,6 @@ static int XLALSpinHcapNumericalDerivative(
 	printf("Hamiltonian = %12.12lf, Flux = %12.12lf, Omega = %12.12lf\n", H, flux, omega);
 #endif
 #if 1
-	REAL8 sscaling1 = (mass1+mass2)*(mass1+mass2)/(mass1*mass1);
-	REAL8 sscaling2 = (mass1+mass2)*(mass1+mass2)/(mass2*mass2);
 	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
         (double) values[0], (double) values[1], (double) values[2], 
         (double) values[3], (double) values[4], (double) values[5], 
@@ -639,8 +652,8 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
   a = sqrt( sigmaKerr.data[0]*sigmaKerr.data[0] 
 			+ sigmaKerr.data[1]*sigmaKerr.data[1]
             + sigmaKerr.data[2]*sigmaKerr.data[2] );
-  printf( "a = %e\n", a );
-  printf( "aStar = %e\n", sqrt( sigmaStar.data[0]*sigmaStar.data[0] + sigmaStar.data[1]*sigmaStar.data[1] + sigmaStar.data[2]*sigmaStar.data[2]) );
+  //printf( "a = %e\n", a );
+  //printf( "aStar = %e\n", sqrt( sigmaStar.data[0]*sigmaStar.data[0] + sigmaStar.data[1]*sigmaStar.data[1] + sigmaStar.data[2]*sigmaStar.data[2]) );
   if ( isnan( a ) )
   {
     printf( "a is nan!!\n");

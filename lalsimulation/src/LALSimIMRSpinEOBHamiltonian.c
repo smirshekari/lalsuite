@@ -130,7 +130,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
                INT4                      tortoise,  /**<< flag to state whether the momentum is the tortoise co-ord */
 	       SpinEOBHCoeffs *coeffs               /**<< Structure containing various coefficients */
                )
-{
+{ int debugPK = 0;
   /* Update the Hamiltonian coefficients, if spins are evolving */
   int UsePrec = 1;
   if ( UsePrec && coeffs->updateHCoeffs )
@@ -183,15 +183,15 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
 
   /* Spin gauge parameters. (YP) simplified, since both are zero. */
   // static const double aa=0., bb=0.;
-/*
+  if(debugPK){
   printf( "In Hamiltonian:\n" );
   printf( "x = %.16e\t%.16e\t%.16e\n", x->data[0], x->data[1], x->data[2] );
   printf( "p = %.16e\t%.16e\t%.16e\n", p->data[0], p->data[1], p->data[2] );
   printf( "sStar = %.16e\t%.16e\t%.16e\n", sigmaStar->data[0], 
 		sigmaStar->data[1], sigmaStar->data[2] );
   printf( "sKerr = %.16e\t%.16e\t%.16e\n", sigmaKerr->data[0], 
-		sigmaKerr->data[1], sigmaKerr->data[2] );
-  */
+		sigmaKerr->data[1], sigmaKerr->data[2] );}
+  
 
   r2 = x->data[0]*x->data[0] + x->data[1]*x->data[1] + x->data[2]*x->data[2];
   r  = sqrt(r2);
@@ -244,7 +244,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   u4 = u2*u2;
   u5 = u4*u;
 
-  printf( "KK = %.16e\n", coeffs->KK );
+  if(debugPK)printf( "KK = %.16e\n", coeffs->KK );
   m1PlusetaKK = -1. + eta * coeffs->KK;
   /* Eq. 5.75 of BB1 */
   bulk = 1./(m1PlusetaKK*m1PlusetaKK) + (2.*u)/m1PlusetaKK + a2*u2;
@@ -252,7 +252,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   logTerms = 1. + eta*coeffs->k0 + eta*log(1. + coeffs->k1*u 
 		+ coeffs->k2*u2 + coeffs->k3*u3 + coeffs->k4*u4
 		+ coeffs->k5*u5 + coeffs->k5l*u5*log(u));
-  printf( "bulk = %.16e, logTerms = %.16e\n", bulk, logTerms );
+  if(debugPK)printf( "bulk = %.16e, logTerms = %.16e\n", bulk, logTerms );
   /* Eq. 5.73 of BB1 */
   deltaU = bulk*logTerms;
   /* Eq. 5.71 of BB1 */
@@ -283,7 +283,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   {
     csi = 1.0;
   }
-  printf( "csi(miami) = %.16e\n", csi );
+  if(debugPK)printf( "csi(miami) = %.16e\n", csi );
 
   prT = p->data[0]*nx + p->data[1]*ny + p->data[2]*nz;
   /* p->data is BL momentum vector; tmpP is tortoise momentum vector */ 
@@ -299,22 +299,24 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   pf = pxir;
   ptheta2 = pvr * pvr / xi2;
 
-  printf( "pr = %.16e, prT = %.16e\n", pr, prT );
+  if(debugPK)
+  {printf( "pr = %.16e, prT = %.16e\n", pr, prT );
 
   printf( " a = %.16e, r = %.16e\n", a, r );
   printf( "D = %.16e, ww = %.16e, rho = %.16e, Lambda = %.16e, xi = %.16e\npr = %.16e, pf = %.16e, deltaR = %.16e, deltaT = %.16e\n", 
-      D, ww, sqrt(rho2), Lambda, sqrt(xi2), pr, pf, deltaR, deltaT );
+      D, ww, sqrt(rho2), Lambda, sqrt(xi2), pr, pf, deltaR, deltaT );}
   /* Eqs. 5.36 - 5.46 of BB1 */
   /* Note that the tortoise prT appears only in the quartic term, explained in Eqs. 14 and 15 of Tarrachini et al. */
   Hns = sqrt(1. + prT*prT*prT*prT*qq*u2 + ptheta2/rho2 + pf*pf*rho2/(Lambda*xi2) + pr*pr*deltaR/rho2)
       / sqrt(Lambda/(rho2*deltaT)) + pf*ww/Lambda;
   
+  if(debugPK){
   printf( "term 1 in Hns: %.16e\n",  prT*prT*prT*prT*qq*u2 );
   printf( "term 2 in Hns: %.16e\n", ptheta2/rho2 );
   printf( "term 3 in Hns = %.16e\n", pf*pf*rho2/(Lambda*xi2) );
   printf( "term 4 in Hns = %.16e\n", pr*pr*deltaR/rho2 );
   printf( "term 5 in Hns = %.16e\n", Lambda/(rho2*deltaT) );
-  printf( "term 6 in Hns = %.16e\n", pf*ww/Lambda );
+  printf( "term 6 in Hns = %.16e\n", pf*ww/Lambda );}
   /* Eqs. 5.30 - 5.33 of BB1 */
   B = sqrt(deltaT);
   w = ww/Lambda;
@@ -340,8 +342,8 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   pn2 = pr * pr * deltaR / rho2;
   pp  = Q - 1.;
 
-  printf( "pn2 = %.16e, pp = %.16e\n", pn2, pp );
-  printf( "sigmaKerr = %.16e, sigmaStar = %.16e\n", sKerr_z, sStar_z );
+  if(debugPK){printf( "pn2 = %.16e, pp = %.16e\n", pn2, pp );
+  printf( "sigmaKerr = %.16e, sigmaStar = %.16e\n", sKerr_z, sStar_z );}
   /* Eq. 5.68 of BB1, (YP) simplified for aa=bb=0. */
   /*
   deltaSigmaStar_x=(- 8.*aa*(1. + 3.*pn2*r - pp*r)*sKerr_x - 8.*bb*(1. + 3.*pn2*r - pp*r)*sStar_x + 
@@ -428,7 +430,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   deltaSigmaStar_z += coeffs->d1v2 * eta * sigmaKerr->data[2] / (r*r*r);
 
 
-  printf( "deltaSigmaStar_x = %.16e, deltaSigmaStar_y = %.16e, deltaSigmaStar_z = %.16e\n", 
+  if(debugPK)printf( "deltaSigmaStar_x = %.16e, deltaSigmaStar_y = %.16e, deltaSigmaStar_z = %.16e\n", 
      deltaSigmaStar_x, deltaSigmaStar_y, deltaSigmaStar_z );
 	
   sx = sStar_x + deltaSigmaStar_x;
@@ -470,11 +472,12 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   H += coeffs->dheffSSv2 * eta / (r*r*r*r) 
                          * (s1Vec->data[0]*s1Vec->data[0] + s1Vec->data[1]*s1Vec->data[1] + s1Vec->data[2]*s1Vec->data[2] 
                            +s2Vec->data[0]*s2Vec->data[0] + s2Vec->data[1]*s2Vec->data[1] + s2Vec->data[2]*s2Vec->data[2]); 
-  printf( "Hns = %.16e, Hs = %.16e, Hss = %.16e\n", Hns, Hs, Hss );
-  printf( "H = %.16e\n", H );
+  if(debugPK){
+	  printf( "Hns = %.16e, Hs = %.16e, Hss = %.16e\n", Hns, Hs, Hss );
+	  printf( "H = %.16e\n", H );}
   /* Real Hamiltonian given by Eq. 2, ignoring the constant -1. */
   Hreal = sqrt(1. + 2.*eta *(H - 1.));
-  printf( "Hreal = %.16e\n", Hreal );
+  if(debugPK)printf( "Hreal = %.16e\n", Hreal );
   
   return Hreal;
 }

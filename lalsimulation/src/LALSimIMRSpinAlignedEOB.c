@@ -1240,7 +1240,7 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[10] = -0.00156249999995;
   values->data[11] = -0.00156250000004;*/
 
-  values->data[0] = 15.87;
+  /*values->data[0] = 15.87;
   values->data[1] = 0.;
   values->data[2] = 0.;
   values->data[3] = -0.000521675194648;
@@ -1251,8 +1251,21 @@ int XLALSimIMRSpinEOBWaveform(
   values->data[8] = 0.00133043857763;
   values->data[9] = 0.;
   values->data[10] = 0.;
-  values->data[11] = 0.;
+  values->data[11] = 0.;*/
   
+  values->data[0] = 7.;
+  values->data[1] = 0.;
+  values->data[2] = 0.;
+  values->data[3] = -0.01181688738719029;
+  values->data[4] = 0.4843132461494007;
+  values->data[5] = -0.003144147080494646;
+  values->data[6] = -0.2704529501882914 * (30./25.) * (30./25.);
+  values->data[7] = -0.2168021314138335 * (30./25.) * (30./25.);
+  values->data[8] = 0.001330438577632606 * (30./25.) * (30./25.);
+  values->data[9] = 0.;
+  values->data[10] = 0.;
+  values->data[11] = 0.01666666666666667 * (30./5.) * (30./5.);
+
   /*values->data[0] = 0.130208309399131;
   values->data[1] = -7.60959058900954;
   values->data[2] = -2.45855499735253;
@@ -1593,6 +1606,7 @@ int XLALSimIMRSpinEOBWaveform(
           fflush(NULL);
   } 
   
+#if 0
   FILE *in  = fopen("/home/prayush/research/SEOBNRv2-3/case1q5/DynDataMathematica.dat", "r" );
   FILE *out = fopen( "/home/prayush/research/SEOBNRv2-3/case1q5/TestDerivatives.dat", "w" );
   double testValues[14], UNUSED testTime, UNUSED testDValues[14], UNUSED testH = 0., UNUSED testF = 0.;
@@ -1634,7 +1648,7 @@ int XLALSimIMRSpinEOBWaveform(
  }
  fclose( out );
  fclose( in );
-
+#endif
 
   /* Initialize the GSL integrator */
   if (!(integrator = XLALAdaptiveRungeKutta4Init(14, XLALSpinHcapNumericalDerivative,
@@ -1684,7 +1698,7 @@ int XLALSimIMRSpinEOBWaveform(
   REAL8 *vphi   = dynamics->data+13*retLen;
   REAL8 *phpart2= dynamics->data+14*retLen;
 
-  out = fopen( "seobDynamics.dat", "w" );
+  FILE *out = fopen( "seobDynamics.dat", "w" );
   for ( i = 0; i < retLen; i++ )
   {
     fprintf( out, "%.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e\n", 
