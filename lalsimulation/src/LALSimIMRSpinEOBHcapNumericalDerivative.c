@@ -620,10 +620,15 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
   memcpy( s1normData, tmpVec+6, 3*sizeof(REAL8) );
   memcpy( s2normData, tmpVec+9, 3*sizeof(REAL8) );
 
+  /* To compute the SigmaKerr and SigmaStar, we need the non-normalized
+   * spin values, i.e. S_i. The spins being evolved are S_i/M^2. */
   for ( i = 0; i < 3; i++ )
   {
-     s1normData[i] /= mT2;
-     s2normData[i] /= mT2;
+	 spin1.data[i]  *= mT2;
+	 spin2.data[i]  *= mT2;
+	 
+     //s1normData[i] /= mT2;
+     //s2normData[i] /= mT2;
   }
 
   /* Calculate various spin parameters */
@@ -631,10 +636,11 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
 				eobParams->m2, &spin1, &spin2 );
   XLALSimIMRSpinEOBCalculateSigmaStar( &sigmaStar, eobParams->m1, 
 				eobParams->m2, &spin1, &spin2 );
-  a = sqrt( sigmaKerr.data[0]*sigmaKerr.data[0] + sigmaKerr.data[1]*sigmaKerr.data[1]
-              + sigmaKerr.data[2]*sigmaKerr.data[2] );
-  //printf( "a = %e\n", a );
-  //printf( "aStar = %e\n", sqrt( sigmaStar.data[0]*sigmaStar.data[0] + sigmaStar.data[1]*sigmaStar.data[1] + sigmaStar.data[2]*sigmaStar.data[2]) );
+  a = sqrt( sigmaKerr.data[0]*sigmaKerr.data[0] 
+			+ sigmaKerr.data[1]*sigmaKerr.data[1]
+            + sigmaKerr.data[2]*sigmaKerr.data[2] );
+  printf( "a = %e\n", a );
+  printf( "aStar = %e\n", sqrt( sigmaStar.data[0]*sigmaStar.data[0] + sigmaStar.data[1]*sigmaStar.data[1] + sigmaStar.data[2]*sigmaStar.data[2]) );
   if ( isnan( a ) )
   {
     printf( "a is nan!!\n");
