@@ -1368,78 +1368,47 @@ MultiBurstTable.RowType = MultiBurst
 #
 
 
-SnglInspiralID = ilwd.get_ilwdchar_class(u"sngl_inspiral", u"event_id")
+SnglInspiralID = ilwd.get_ilwdchar_class(u"sngl_inspiral", u"sngl_inspiral_id")
 
 
 class SnglInspiralTable(table.Table):
 	tableName = "sngl_inspiral:table"
 	validcolumns = {
+		"sngl_inspiral_id": "ilwd:char",
+		"tmplt_inspiral_id": "ilwd:char",
 		"process_id": "ilwd:char",
-		"ifo": "lstring",
-		"search": "lstring",
-		"channel": "lstring",
 		"end_time": "int_4s",
 		"end_time_ns": "int_4s",
-		"end_time_gmst": "real_8",
-		"impulse_time": "int_4s",
-		"impulse_time_ns": "int_4s",
-		"template_duration": "real_8",
-		"event_duration": "real_8",
-		"amplitude": "real_4",
+		"ifo": "lstring",
+		"snr": "real_4",
+		"sigmasq": "real_4",
 		"eff_distance": "real_4",
 		"coa_phase": "real_4",
-		"mass1": "real_4",
-		"mass2": "real_4",
-		"mchirp": "real_4",
-		"mtotal": "real_4",
-		"eta": "real_4",
-		"kappa": "real_4",
-		"chi": "real_4",
-		"tau0": "real_4",
-		"tau2": "real_4",
-		"tau3": "real_4",
-		"tau4": "real_4",
-		"tau5": "real_4",
-		"ttotal": "real_4",
-		"psi0": "real_4",
-		"psi3": "real_4",
-		"alpha": "real_4",
-		"alpha1": "real_4",
-		"alpha2": "real_4",
-		"alpha3": "real_4",
-		"alpha4": "real_4",
-		"alpha5": "real_4",
-		"alpha6": "real_4",
-		"beta": "real_4",
-		"f_final": "real_4",
-		"snr": "real_4",
 		"chisq": "real_4",
-		"chisq_dof": "int_4s",
+		"chisq_dof": "real_4",
 		"bank_chisq": "real_4",
-		"bank_chisq_dof": "int_4s",
-		"cont_chisq": "real_4",
-		"cont_chisq_dof": "int_4s",
-		"sigmasq": "real_8",
+		"bank_chisq_dof": "real_4",
+		"auto_chisq": "real_4",
+		"auto_chisq_dof": "real_4",
 		"rsqveto_duration": "real_4",
-		"Gamma0": "real_4",
-		"Gamma1": "real_4",
-		"Gamma2": "real_4",
-		"Gamma3": "real_4",
-		"Gamma4": "real_4",
-		"Gamma5": "real_4",
-		"Gamma6": "real_4",
-		"Gamma7": "real_4",
-		"Gamma8": "real_4",
-		"Gamma9": "real_4",
-		"spin1x": "real_4",
-		"spin1y": "real_4",
-		"spin1z": "real_4",
-		"spin2x": "real_4",
-		"spin2y": "real_4",
-		"spin2z": "real_4",
-		"event_id": "ilwd:char"
+		#
+		# FIXME: the following columns will eventually be
+		# deprecated in favor of the tmplt_inspiral table
+		#
+		"mass1": "real_8",
+		"mass2": "real_8",
+		"spin1z": "real_8",
+		"spin2z": "real_8",
+		"f_min": "real_8",
+		"waveform_duration": "real_4",
+		"gamma0": "real_4",
+		"gamma1": "real_4",
+		"gamma2": "real_4",
+		"gamma3": "real_4",
+		"gamma4": "real_4",
+		"gamma5": "real_4"
 	}
-	constraints = "PRIMARY KEY (event_id)"
+	constraints = "PRIMARY KEY (sngl_inspiral_id)"
 	# FIXME:  lal uses an ID of 0 to indicate "no valid ID has been
 	# set", so we start at 1 for safety, but eventually that should be
 	# fixed in LAL and then this can be put back to 0 for cleanliness.
@@ -1728,6 +1697,65 @@ class SnglInspiral(object):
 
 
 SnglInspiralTable.RowType = SnglInspiral
+
+
+#
+# =============================================================================
+#
+#                             tmplt_inspiral:table
+#
+# =============================================================================
+#
+
+
+TmpltInspiralID = ilwd.get_ilwdchar_class(u"tmplt_inspiral", u"tmplt_inspiral_id")
+
+
+class TmpltInspiralTable(table.Table):
+	tableName = "tmplt_inspiral:table"
+	validcolumns = {
+		"tmplt_inspiral_id": "ilwd:char",
+		"bank_params_id": "ilwd:char",
+		"segment_def_id": "ilwd:char",
+		"noise_moment_id": "ilwd:char",
+		"process_id": "ilwd:char",
+		"phi_ref": "real_8",
+		"mass1": "real_8",
+		"mass2": "real_8",
+		"spin1x": "real_8",
+		"spin1y": "real_8",
+		"spin1z": "real_8",
+		"spin2x": "real_8",
+		"spin2y": "real_8",
+		"spin2z": "real_8",
+		"f_min": "real_8",
+		"f_ref": "real_8",
+		"f_max": "real_8",
+		"distance": "real_8",
+		"inclination": "real_8",
+		"lambda1": "real_8",
+		"lambda2": "real_8",
+		"eccentricity": "real_8",
+		"perihelion_phase": "real_8",
+		"amplitude_order": "int_4s",
+		"phase_order": "int_4s",
+		"spin_order": "int_4s",
+		"tidal_order": "int_4s",
+		"axis_choice": "lstring",
+		"modes_flag": "lstring",
+		"approximant": "lstring",
+		"taper": "lstring",
+		"waveform_duration": "real_4"
+	}
+
+	constraints = "PRIMARY KEY (tmplt_inspiral_id)"
+	next_id = TmpltInspiralID(0)
+
+
+class TmpltInspiral(object):
+    __slots__ = TmpltInspiralTable.validcolumns.keys()
+
+TmpltInspiralTable.RowType = TmpltInspiral
 
 
 #
@@ -2521,72 +2549,59 @@ MultiInspiralTable.RowType = MultiInspiral
 #
 
 
-SimInspiralID = ilwd.get_ilwdchar_class(u"sim_inspiral", u"simulation_id")
+SimInspiralID = ilwd.get_ilwdchar_class(u"sim_inspiral", u"sim_inspiral_id")
 
 
 class SimInspiralTable(table.Table):
 	tableName = "sim_inspiral:table"
 	validcolumns = {
+		"sim_inspiral_id": "ilwd:char",
+		"tmplt_inspiral_id": "ilwd:char",
 		"process_id": "ilwd:char",
-		"waveform": "lstring",
+		"sim_tag": "lstring",
 		"geocent_end_time": "int_4s",
 		"geocent_end_time_ns": "int_4s",
+		"ra": "real_4",
+		"dec": "real_4",
+		"polarization": "real_4",
+		"coa_phase": "real_4",
+		#
+		# FIXME: the following columns will eventually be
+		# deprecated in favor of the tmplt_inspiral table and
+		# the sim_inspiral_params table
+		#
+		"mass1": "real_8",
+		"mass2": "real_8",
+		"spin1x": "real_8",
+		"spin1y": "real_8",
+		"spin1z": "real_8",
+		"spin2x": "real_8",
+		"spin2y": "real_8",
+		"spin2z": "real_8",
+		"f_min": "real_8",
+		"f_max": "real_8",
+		"distance": "real_8",
+		"inclination": "real_8",
+		"eccentricity": "real_8",
+		"perihelion_phase": "real_8",
+		"amplitude_order": "int_4s",
+		"phase_order": "int_4s",
+		"spin_order": "lstring",
+		"modes_flag": "lstring",
+		"approximant": "lstring",
+		"taper": "lstring",
+# following will be moved to the sim_inspiral_params table
 		"h_end_time": "int_4s",
 		"h_end_time_ns": "int_4s",
 		"l_end_time": "int_4s",
 		"l_end_time_ns": "int_4s",
-		"g_end_time": "int_4s",
-		"g_end_time_ns": "int_4s",
-		"t_end_time": "int_4s",
-		"t_end_time_ns": "int_4s",
 		"v_end_time": "int_4s",
 		"v_end_time_ns": "int_4s",
-		"end_time_gmst": "real_8",
-		"source": "lstring",
-		"mass1": "real_4",
-		"mass2": "real_4",
-		"mchirp": "real_4",
-		"eta": "real_4",
-		"distance": "real_4",
-		"longitude": "real_4",
-		"latitude": "real_4",
-		"inclination": "real_4",
-		"coa_phase": "real_4",
-		"polarization": "real_4",
-		"psi0": "real_4",
-		"psi3": "real_4",
-		"alpha": "real_4",
-		"alpha1": "real_4",
-		"alpha2": "real_4",
-		"alpha3": "real_4",
-		"alpha4": "real_4",
-		"alpha5": "real_4",
-		"alpha6": "real_4",
-		"beta": "real_4",
-		"spin1x": "real_4",
-		"spin1y": "real_4",
-		"spin1z": "real_4",
-		"spin2x": "real_4",
-		"spin2y": "real_4",
-		"spin2z": "real_4",
-		"theta0": "real_4",
-		"phi0": "real_4",
-		"f_lower": "real_4",
-		"f_final": "real_4",
 		"eff_dist_h": "real_4",
 		"eff_dist_l": "real_4",
-		"eff_dist_g": "real_4",
-		"eff_dist_t": "real_4",
-		"eff_dist_v": "real_4",
-		"numrel_mode_min": "int_4s",
-		"numrel_mode_max": "int_4s",
-		"numrel_data": "lstring",
-		"amp_order": "int_4s",
-		"taper": "lstring",
-		"bandpass": "int_4s",
-		"simulation_id": "ilwd:char"
+		"eff_dist_v": "real_4"
 	}
-	constraints = "PRIMARY KEY (simulation_id)"
+	constraints = "PRIMARY KEY (sim_inspiral_id)"
 	next_id = SimInspiralID(0)
 	interncolumns = ("process_id", "waveform", "source")
 
@@ -2691,6 +2706,37 @@ class SimInspiral(object):
 
 
 SimInspiralTable.RowType = SimInspiral
+
+
+#
+# =============================================================================
+#
+#                               sim_inspiral_params:table
+#
+# =============================================================================
+#
+
+class SimInspiralParamsTable(table.Table):
+	tableName = "sim_inspiral_params:table"
+	validcolumns = {
+		"sim_inspiral_id": "ilwd:char",
+		"ifo": "lstring",
+		"end_time": "int_4s",
+		"end_time_ns": "int_4s",
+		"effective_distance": "real_8",
+	}
+
+	how_to_index = {
+		"sip_sid_index": ("sim_inspiral_id",),
+	}
+
+
+class SimInspiralParams(object):
+    __slots__ = SimInspiralParamsTable.validcolumns.keys()
+
+
+SimInspiralParamsTable.RowType = SimInspiralParams
+
 
 
 #
@@ -3772,11 +3818,13 @@ TableByName = {
 	table.StripTableName(SnglBurstTable.tableName): SnglBurstTable,
 	table.StripTableName(MultiBurstTable.tableName): MultiBurstTable,
 	table.StripTableName(SnglInspiralTable.tableName): SnglInspiralTable,
+	table.StripTableName(TmpltInspiralTable.tableName): TmpltInspiralTable,
 	table.StripTableName(CoincInspiralTable.tableName): CoincInspiralTable,
 	table.StripTableName(SnglRingdownTable.tableName): SnglRingdownTable,
 	table.StripTableName(CoincRingdownTable.tableName): CoincRingdownTable,
 	table.StripTableName(MultiInspiralTable.tableName): MultiInspiralTable,
 	table.StripTableName(SimInspiralTable.tableName): SimInspiralTable,
+	table.StripTableName(SimInspiralParamsTable.tableName): SimInspiralParamsTable,
 	table.StripTableName(SimBurstTable.tableName): SimBurstTable,
 	table.StripTableName(SimRingdownTable.tableName): SimRingdownTable,
 	table.StripTableName(SummValueTable.tableName): SummValueTable,
