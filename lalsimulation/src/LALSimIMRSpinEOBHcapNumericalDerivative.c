@@ -59,6 +59,7 @@
  *------------------------------------------------------------------------------------------
  */
 
+static REAL8 XLALKronecker( const INT4 i, const INT4 j );
 
 static double GSLSpinHamiltonianWrapper( double x, void *params );
 
@@ -82,6 +83,12 @@ static REAL8 XLALSpinHcapNumDerivWRTParam(
  *
  *------------------------------------------------------------------------------------------
  */
+/* Calculate the kronecker delta */
+static REAL8 XLALKronecker( const INT4 i, const INT4 j )
+{
+	REAL8 d = ((i == j) ? 1. : 0.);
+	return d;
+}
 
 /**
  * Function to calculate numerical derivatives of the spin EOB Hamiltonian,
@@ -118,7 +125,7 @@ static int XLALSpinHcapNumericalDerivative(
   INT4         gslStatus;
   UINT4 SpinAlignedEOBversion;
 
-  UINT4 i;
+  UINT4 i, j, k, l;
   
   REAL8Vector rVec, pVec;
   REAL8 rData[3], pData[3];
@@ -129,7 +136,7 @@ static int XLALSpinHcapNumericalDerivative(
   REAL8       polData[4];
 
   REAL8 mass1, mass2, eta;
-  REAL8 rrTerm2, pDotS1, pDotS2;
+  REAL8 UNUSED rrTerm2, pDotS1, pDotS2;
   REAL8Vector s1, s2, s1norm, s2norm, sKerr, sStar;
   REAL8       s1Data[3], s2Data[3], s1DataNorm[3], s2DataNorm[3];
   REAL8       sKerrData[3], sStarData[3];
@@ -151,6 +158,16 @@ static int XLALSpinHcapNumericalDerivative(
   /* The error in a derivative as measured by GSL */
   REAL8 absErr;
 
+	  REAL8 tmpP[3], rMag, rMag2, prT;
+	  REAL8 u, u2, u3, u4, u5, w2, a2;
+	  REAL8 D, m1PlusetaKK, bulk, logTerms, deltaU, deltaT, deltaR;
+	  REAL8 UNUSED eobD_r, deltaU_u, deltaU_r, deltaT_r;
+	  REAL8 dcsi, csi;
+	  
+	REAL8 tmpValues[12];
+	REAL8 Tmatrix[3][3], invTmatrix[3][3], dTijdXk[3][3][3];
+	REAL8 tmpPdotT1[3], tmpPdotT2[3], tmpPdotT3[3]; // 3 terms of Eq. A5
+	
   /* Set up pointers for GSL */ 
   params.values  = values;
   params.params  = (SpinEOBParams *)funcParams;
@@ -162,7 +179,8 @@ static int XLALSpinHcapNumericalDerivative(
   mass2 = params.params->eobParams->m2;
   eta   = params.params->eobParams->eta;
   SpinAlignedEOBversion = params.params->seobCoeffs->SpinAlignedEOBversion;  
-
+  SpinEOBHCoeffs *coeffs = (SpinEOBHCoeffs*) params.params->seobCoeffs;
+  
   /* For precessing binaries, the effective spin of the Kerr 
    * background evolves with time. The coefficients used to compute
    * the Hamiltonian depend on the Kerr spin, and hence need to 
@@ -226,7 +244,130 @@ static int XLALSpinHcapNumericalDerivative(
     /* Release the old memory */
     //if(0)XLALDestroyREAL8Vector( delsigmaKerr );
   /*}}}*/}
-  
+
+  /* Set the position/momenta vectors to point to the appropriate things */
+  rVec.length = pVec.length = 3;
+  rVec.data   = rData;
+  pVec.data   = pData;
+  memcpy( rData, values, sizeof(rData) );
+  memcpy( pData, values+3, sizeof(pData) );
+
+  /* We need to re-calculate the parameters at each step as precessing
+   * spins will not be constant */
+  /* TODO: Modify so that only spin terms get re-calculated */
+
+  /* We cannot point to the values vector directly as it leads to a warning */
+  s1.length = s2.length = s1norm.length = s2norm.length = 3;
+  s1.data = s1Data;
+  s2.data = s2Data;
+  s1norm.data = s1DataNorm;
+  s2norm.data = s2DataNorm;
+
+  memcpy( s1Data, values+6, 3*sizeof(REAL8) );
+  memcpy( s2Data, values+9, 3*sizeof(REAL8) );
+  memcpy( s1DataNorm, values+6, 3*sizeof(REAL8) );
+  memcpy( s2DataNorm, values+9, 3*sizeof(REAL8) );
+
+  for ( i = 0; i < 3; i++ )
+  {
+	  s1Data[i] *= (mass1+mass2)*(mass1+mass2);
+	  s2Data[i] *= (mass1+mass2)*(mass1+mass2);
+  }
+
+  sKerr.length = 3;
+  sKerr.data   = sKerrData; 
+  XLALSimIMRSpinEOBCalculateSigmaKerr( &sKerr, mass1, mass2, &s1, &s2 );
+
+  sStar.length = 3;
+  sStar.data   = sStarData;
+  XLALSimIMRSpinEOBCalculateSigmaStar( &sStar, mass1, mass2, &s1, &s2 );
+
+  a = sqrt(sKerr.data[0]*sKerr.data[0] + sKerr.data[1]*sKerr.data[1] 
+      + sKerr.data[2]*sKerr.data[2]);
+ 
+	  ///* set the tortoise flag to 2 */
+	  //INT4 oldTortoise = params.params->tortoise;
+	  //params.params->tortoise = 2;
+	  
+	  /* Convert momenta to p */
+	  rMag = sqrt(rData[0]*rData[0] + rData[1]*rData[1] + rData[2]*rData[2]);
+	  prT = pData[0]*(rData[0]/rMag) + pData[1]*(rData[1]/rMag) 
+					+ pData[2]*(rData[2]/rMag);
+	
+	  rMag2 = rMag * rMag;
+	  u  = 1./rMag;
+      u2 = u*u;
+      u3 = u2*u;
+      u4 = u2*u2;
+      u5 = u4*u;
+      a2 = a*a;
+      w2 = rMag2 + a2;
+      /* Eq. 5.83 of BB1, inverse */
+      D = 1. + log(1. + 6.*eta*u2 + 2.*(26. - 3.*eta)*eta*u3);
+      eobD_r =  (u2/(D*D))*(12.*eta*u + 6.*(26. - 3.*eta)*eta*u2)/(1. 
+			+ 6.*eta*u2 + 2.*(26. - 3.*eta)*eta*u3);
+      m1PlusetaKK = -1. + eta * coeffs->KK;
+	  /* Eq. 5.75 of BB1 */
+      bulk = 1./(m1PlusetaKK*m1PlusetaKK) + (2.*u)/m1PlusetaKK + a2*u2;
+	  /* Eq. 5.73 of BB1 */
+	  logTerms = 1. + eta*coeffs->k0 + eta*log(1. + coeffs->k1*u 
+		+ coeffs->k2*u2 + coeffs->k3*u3 + coeffs->k4*u4
+		+ coeffs->k5*u5 + coeffs->k5l*u5*log(u));
+	  /* Eq. 5.73 of BB1 */
+      deltaU = bulk*logTerms;
+      /* Eq. 5.71 of BB1 */
+      deltaT = rMag2*deltaU;
+      /* ddeltaU/du */
+	  deltaU_u = 2.*(1./m1PlusetaKK + a2*u)*logTerms + 
+		bulk * (eta*(coeffs->k1 + u*(2.*coeffs->k2 + u*(3.*coeffs->k3 
+		+ u*(4.*coeffs->k4 + 5.*(coeffs->k5+coeffs->k5l*log(u))*u)))))
+		/ (1. + coeffs->k1*u + coeffs->k2*u2 + coeffs->k3*u3 
+		+ coeffs->k4*u4 + (coeffs->k5+coeffs->k5l*log(u))*u5);
+	  deltaU_r = -u2 * deltaU_u;
+      /* Eq. 5.38 of BB1 */
+      deltaR = deltaT*D;	   
+	  if ( params.params->tortoise )
+		  csi = sqrt( deltaT * deltaR )/ w2; /* Eq. 28 of Pan et al. PRD 81, 084041 (2010) */
+	  else
+	      csi = 1.0;
+
+	  for( i = 0; i < 3; i++ )
+	  { 
+		  tmpP[i] = pData[i] - (rData[i]/rMag) * prT * (csi-1.)/csi;
+	  }
+	  //memcpy( p.data, tmpP, sizeof(tmpP) );
+
+  /* Calculate the T-matrix, required to convert P from tortoise to 
+   * non-tortoise coordinates, and/or vice-versa. This is given explicitly
+   * in Eq. A3 of 0912.3466 */
+  for( i = 0; i < 3; i++ )
+	for( j = 0; j <= i; j++ )
+	{
+		Tmatrix[i][j] = Tmatrix[j][i] = (rData[i]*rData[j]/rMag2) 
+									* (csi - 1.);
+		
+		invTmatrix[i][j] = invTmatrix[j][i] = 
+				- (csi - 1)/csi * (rData[i]*rData[j]/rMag2);
+		
+		if( i==j ){ 
+			Tmatrix[i][j]++; Tmatrix[j][i]++; 
+			invTmatrix[i][j]++; invTmatrix[i][j]++; }
+		
+	}
+
+  dcsi = csi * (2./rMag + deltaU_r/deltaU) + csi*csi*csi 
+      / (2.*rMag2*rMag2 * deltaU*deltaU) * ( rMag*(-4.*w2)/D - eobD_r*(w2*w2));
+   
+  for( i = 0; i < 3; i++ )
+	for( j = 0; j < 3; j++ )
+		for( k = 0; k < 3; k++ )
+		{
+			dTijdXk[i][j][k]  = 
+		(rData[i]*XLALKronecker(j,k) + XLALKronecker(i,k)*rData[j]) 
+		*(csi - 1.)/rMag2 
+		+ rData[i]*rData[j]*rData[k]*(csi - 1.)/rMag2/rMag*(-2./rMag + dcsi);
+		}
+	
   /* Now calculate derivatives w.r.t. each parameter */
   for ( i = 0; i < 12; i++ )
   {
@@ -243,6 +384,19 @@ static int XLALSpinHcapNumericalDerivative(
       XLAL_CALLGSL( gslStatus = gsl_deriv_central( &F, values[i],
                       STEP_SIZE*mass2*mass2, &tmpDValues[i], &absErr ) );
     }
+    else if ( i < 3 )
+    {
+		params.params->tortoise = 2;
+		memcpy( tmpValues, params.values, sizeof(tmpValues) );
+		tmpValues[3] = tmpP[0]; tmpValues[4] = tmpP[1]; tmpValues[5] = tmpP[2];
+		params.values = tmpValues;
+		
+		XLAL_CALLGSL( gslStatus = gsl_deriv_central( &F, values[i], 
+                      STEP_SIZE, &tmpDValues[i], &absErr ) );
+                      
+        params.values = values;
+        params.params->tortoise = 1;
+	}
     else
     {
       params.params->seobCoeffs->updateHCoeffs = 1;
@@ -293,27 +447,6 @@ static int XLALSpinHcapNumericalDerivative(
 				+ values[2]*values[5]) / polData[0];
   polData[3] = magL;
 
-  /* We need to re-calculate the parameters at each step as precessing
-   * spins will not be constant */
-  /* TODO: Modify so that only spin terms get re-calculated */
-
-  /* We cannot point to the values vector directly as it leads to a warning */
-  s1.length = s2.length = s1norm.length = s2norm.length = 3;
-  s1.data = s1Data;
-  s2.data = s2Data;
-  s1norm.data = s1DataNorm;
-  s2norm.data = s2DataNorm;
-
-  memcpy( s1Data, values+6, 3*sizeof(REAL8) );
-  memcpy( s2Data, values+9, 3*sizeof(REAL8) );
-  memcpy( s1DataNorm, values+6, 3*sizeof(REAL8) );
-  memcpy( s2DataNorm, values+9, 3*sizeof(REAL8) );
-
-  for ( i = 0; i < 3; i++ )
-  {
-	  s1Data[i] *= (mass1+mass2)*(mass1+mass2);
-	  s2Data[i] *= (mass1+mass2)*(mass1+mass2);
-  }
 
   /*Compute \vec{S_i} \dot \vec{L}	*/
   s1dotL = (s1Data[0]*Lhatx + s1Data[1]*Lhaty + s1Data[2]*Lhatz)
@@ -341,17 +474,6 @@ static int XLALSpinHcapNumericalDerivative(
   chiS = 0.5 * (s1dotL + s2dotL);
   chiA = 0.5 * (s1dotL - s2dotL);
 
-  sKerr.length = 3;
-  sKerr.data   = sKerrData; 
-  XLALSimIMRSpinEOBCalculateSigmaKerr( &sKerr, mass1, mass2, &s1, &s2 );
-
-  sStar.length = 3;
-  sStar.data   = sStarData;
-  XLALSimIMRSpinEOBCalculateSigmaStar( &sStar, mass1, mass2, &s1, &s2 );
-
-  a = sqrt(sKerr.data[0]*sKerr.data[0] + sKerr.data[1]*sKerr.data[1] 
-      + sKerr.data[2]*sKerr.data[2]);
- 
   /* Compute the test-particle limit spin of the deformed-Kerr background */
   /* TODO: Check this is actually the way it works in LAL */
   switch ( SpinAlignedEOBversion )
@@ -380,22 +502,22 @@ static int XLALSpinHcapNumericalDerivative(
   XLALSimIMRCalculateSpinEOBHCoeffs( params.params->seobCoeffs, eta, a, 
       SpinAlignedEOBversion );
 
-  rVec.length = pVec.length = 3;
-  rVec.data   = rData;
-  pVec.data   = pData;
-
-  memcpy( rData, values, sizeof(rData) );
-  memcpy( pData, values+3, sizeof(pData) );
-
   H = XLALSimIMRSpinEOBHamiltonian( eta, &rVec, &pVec, &s1norm, &s2norm, 
 	&sKerr, &sStar, params.params->tortoise, params.params->seobCoeffs ); 
   H = H * (mass1 + mass2);
   
   /* Now make the conversion */
   /* rDot */
-  dvalues[0]  = tmpDValues[3];
-  dvalues[1]  = tmpDValues[4];
-  dvalues[2]  = tmpDValues[5];
+  for( i = 0; i < 3; i++ )
+	  for( j = 0, dvalues[i] = 0.; j < 3; j++ )
+		  dvalues[i] += tmpDValues[j+3]*Tmatrix[i][j];
+
+  //dvalues[0]  = tmpDValues[3]*Tmatrix[0][0] + tmpDValues[4]*Tmatrix[0][1]
+				//+ tmpDValues[5]*Tmatrix[0][2];
+  //dvalues[1]  = tmpDValues[3]*Tmatrix[1][0] + tmpDValues[4]*Tmatrix[1][1]
+				//+ tmpDValues[5]*Tmatrix[1][2];
+  //dvalues[2]  = tmpDValues[3]*Tmatrix[2][0] + tmpDValues[4]*Tmatrix[2][1]
+				//+ tmpDValues[5]*Tmatrix[2][2];
 
   /* Now calculate omega, and hence the flux */
   rCrossV_x = values[1]*dvalues[2] - values[2]*dvalues[1];
@@ -416,9 +538,44 @@ static int XLALSpinHcapNumericalDerivative(
   //printf( "rrForce = %e %e %e\n", - flux * values[3] / (omega*magL), - flux * values[4] / (omega*magL), - flux * values[5] / (omega*magL)) ;
 
   /* Now pDot */
-  dvalues[3]  = - tmpDValues[0] - flux * values[3] / (omega*magL) + rrTerm2*Lx;
-  dvalues[4]  = - tmpDValues[1] - flux * values[4] / (omega*magL) + rrTerm2*Ly;
-  dvalues[5]  = - tmpDValues[2] - flux * values[5] / (omega*magL) + rrTerm2*Lz;
+  /* Compute the first and second terms in eq. A5 of 0912.3466 */
+  for( i = 0; i < 3; i++ )
+	{
+		for( j = 0, tmpPdotT1[i]=0.; j < 3; j++ )
+			tmpPdotT1[i] += -tmpDValues[j]*Tmatrix[i][j];
+		
+		tmpPdotT2[i] = - flux * values[i+3] / (omega*magL);
+	}
+
+  /* Compute the third term in eq. A5 */
+  REAL8 tmpPdotT3T11[3][3][3], tmpPdotT3T12[3][3], tmpPdotT3T2[3];
+  
+  for( i = 0; i < 3; i++ )
+	for( j = 0; j < 3; j++ )
+		for( l = 0; l < 3; l++ )
+			for( k = 0, tmpPdotT3T11[i][j][l] = 0.; k < 3; k++ )
+				tmpPdotT3T11[i][j][l] += dTijdXk[i][k][j] * invTmatrix[k][l];
+
+  for( i = 0; i < 3; i++ )
+	for( j = 0; j < 3; j++ )
+		for( k = 0, tmpPdotT3T12[i][j] = 0.; k < 3; k++ )
+			tmpPdotT3T12[i][j] += tmpPdotT3T11[i][j][k] * pData[k];
+
+  for( i = 0; i < 3; i++ )
+	for( j = 0, tmpPdotT3T2[i]=0.; j < 3; j++ )
+		tmpPdotT3T2[i] += tmpDValues[j+3] * Tmatrix[i][j];
+
+  for( i = 0; i < 3; i++ )
+	for( j = 0, tmpPdotT3[i] = 0.; j < 3; j++ )
+		tmpPdotT3[i] += tmpPdotT3T12[i][j] * tmpPdotT3T2[j];
+  
+  /* Add them to obtain pDot */
+  for( i = 0; i < 3; i++ ) 
+	dvalues[i+3] = tmpPdotT1[i] + tmpPdotT2[i] + tmpPdotT3[i];
+	
+  //dvalues[3]  = - tmpDValues[0] - flux * values[3] / (omega*magL) + rrTerm2*Lx;
+  //dvalues[4]  = - tmpDValues[1] - flux * values[4] / (omega*magL) + rrTerm2*Ly;
+  //dvalues[5]  = - tmpDValues[2] - flux * values[5] / (omega*magL) + rrTerm2*Lz;
 
   /* spin1 */
   //printf( "Raw spin1 derivatives = %e %e %e\n", tmpDValues[6], tmpDValues[7], tmpDValues[8] );
@@ -526,7 +683,6 @@ static int XLALSpinHcapNumericalDerivative(
   return XLAL_SUCCESS;
 }
 
-
 /**
  * Calculate the derivative of the Hamiltonian w.r.t. a specific parameter
  * Used by generic spin EOB model, including initial conditions solver.
@@ -598,7 +754,7 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
   HcapDerivParams *dParams = (HcapDerivParams *)params;
 
   EOBParams *eobParams = (EOBParams*) dParams->params->eobParams;
-  SpinEOBHCoeffs *coeffs = (SpinEOBHCoeffs*) dParams->params->seobCoeffs;
+  SpinEOBHCoeffs UNUSED *coeffs = (SpinEOBHCoeffs*) dParams->params->seobCoeffs;
   
   REAL8 tmpVec[12];
   REAL8 s1normData[3], s2normData[3], sKerrData[3], sStarData[3];
@@ -607,12 +763,14 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
   REAL8Vector r, p, spin1, spin2, spin1norm, spin2norm;
   REAL8Vector sigmaKerr, sigmaStar;
 
-  int i;
+  INT4 i;
   REAL8 a;
   REAL8 m1 = eobParams->m1;
   REAL8 m2 = eobParams->m2;
   REAL8 mT2 = (m1+m2)*(m1+m2);
+  REAL8 eta = m1*m2/mT2;
 
+  INT4 oldTortoise = dParams->params->tortoise;
   /* Use a temporary vector to avoid corrupting the main function */
   memcpy( tmpVec, dParams->values, sizeof(tmpVec) );
 
@@ -624,64 +782,6 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
   sigmaKerr.length = sigmaStar.length = 3;
   r.data     = tmpVec;
   p.data     = tmpVec+3;
-  
-  /* If computing the derivative w.r.t. the position vector, we need to 
-   * pass p and not p* to the Hamiltonian. This is so because we want to 
-   * hold p constant as we compute dH/dx. The way to do this is set the
-   * tortoise flag = 2, and convert the momenta being evolved, i.e. p*, 
-   * to p and pass that as input */
-   // TODO
-#if 0
-  if ( dParams->varyParam < 3 )
-  {
-	  /* set the tortoise flag to 2 */
-	  INT4 oldTortoise = dParams->params->tortoise;
-	  dParams->params->tortoise = 2;
-	  
-	  /* Convert momenta to p */
-	  REAL8 tmpP[3];
-	  REAL8 rMag = sqrt(r.data[0]*r.data[0] + r.data[1]*r.data[1] 
-					+ r.data[2]*r.data[2]);
-	  REAL8 prT = p.data[0]*(r.data[0]/rMag) + p.data[1]*(r.data[1]/rMag) 
-					+ p.data[2]*(r.data[2]/rMag);
-					
-	  REAL8 u, u2, u3, u4, u5, w2, a2;
-	  u  = 1./r;
-      u2 = u*u;
-      u3 = u2*u;
-      u4 = u2*u2;
-      u5 = u4*u;
-      a2 = sigmaKerr.data[0]*sigmaKerr.data[0] 
-				+ sigmaKerr.data[1]*sigmaKerr.data[1]
-				+ sigmaKerr.data[2]*sigmaKerr.data[2];
-      w2 = r2 + a2;
-      /* Eq. 5.83 of BB1, inverse */
-      REAL8 D = 1. + log(1. + 6.*eta*u2 + 2.*(26. - 3.*eta)*eta*u3);
-      REAL8 m1PlusetaKK = -1. + eta * coeffs->KK;
-	  /* Eq. 5.75 of BB1 */
-      REAL8 bulk = 1./(m1PlusetaKK*m1PlusetaKK) + (2.*u)/m1PlusetaKK + a2*u2;
-	  /* Eq. 5.73 of BB1 */
-	  REAL8 logTerms = 1. + eta*coeffs->k0 + eta*log(1. + coeffs->k1*u 
-		+ coeffs->k2*u2 + coeffs->k3*u3 + coeffs->k4*u4
-		+ coeffs->k5*u5 + coeffs->k5l*u5*log(u));
-	  /* Eq. 5.73 of BB1 */
-      REAL8 deltaU = bulk*logTerms;
-      /* Eq. 5.71 of BB1 */
-      REAL8 deltaT = r2*deltaU;
-      /* Eq. 5.38 of BB1 */
-      REAL8 deltaR = deltaT*D;	   
-	  if ( oldTortoise )
-		  csi = sqrt( deltaT * deltaR )/ w2; /* Eq. 28 of Pan et al. PRD 81, 084041 (2010) */
-	  else
-	      csi = 1.0;
-
-	  for( i = 0; i < 3; i++ )
-	  { 
-		  tmpP[i] = p.data[i] - (r.data[i]/rMag) * prT * (csi-1.)/csi;
-	  }
-	  memcpy( p.data, tmpP, sizeof(tmpP) );
-  }
-#endif
   
   spin1.data = tmpVec+6;
   spin2.data = tmpVec+9;
@@ -719,7 +819,62 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
     printf( "a is nan!!\n");
   }
   //XLALSimIMRCalculateSpinEOBHCoeffs( dParams->params->seobCoeffs, eobParams->eta, a );
-  
+  /* If computing the derivative w.r.t. the position vector, we need to 
+   * pass p and not p* to the Hamiltonian. This is so because we want to 
+   * hold p constant as we compute dH/dx. The way to do this is set the
+   * tortoise flag = 2, and convert the momenta being evolved, i.e. p*, 
+   * to p and pass that as input */
+   // TODO
+#if 1
+  if ( dParams->varyParam < 3 )
+  {
+	  /* set the tortoise flag to 2 */
+	  dParams->params->tortoise = 2;
+	  
+	  /* Convert momenta to p */
+	  REAL8 tmpP[3];
+	  REAL8 rMag = sqrt(r.data[0]*r.data[0] + r.data[1]*r.data[1] 
+					+ r.data[2]*r.data[2]);
+	  REAL8 prT = p.data[0]*(r.data[0]/rMag) + p.data[1]*(r.data[1]/rMag) 
+					+ p.data[2]*(r.data[2]/rMag);
+					
+	  REAL8 u, u2, u3, u4, u5, w2, a2;
+	  REAL8 csi; 
+	  
+	  u  = 1./rMag;
+      u2 = u*u;
+      u3 = u2*u;
+      u4 = u2*u2;
+      u5 = u4*u;
+      a2 = a*a;
+      w2 = rMag*rMag + a2;
+      /* Eq. 5.83 of BB1, inverse */
+      REAL8 D = 1. + log(1. + 6.*eta*u2 + 2.*(26. - 3.*eta)*eta*u3);
+      REAL8 m1PlusetaKK = -1. + eta * coeffs->KK;
+	  /* Eq. 5.75 of BB1 */
+      REAL8 bulk = 1./(m1PlusetaKK*m1PlusetaKK) + (2.*u)/m1PlusetaKK + a2*u2;
+	  /* Eq. 5.73 of BB1 */
+	  REAL8 logTerms = 1. + eta*coeffs->k0 + eta*log(1. + coeffs->k1*u 
+		+ coeffs->k2*u2 + coeffs->k3*u3 + coeffs->k4*u4
+		+ coeffs->k5*u5 + coeffs->k5l*u5*log(u));
+	  /* Eq. 5.73 of BB1 */
+      REAL8 deltaU = bulk*logTerms;
+      /* Eq. 5.71 of BB1 */
+      REAL8 deltaT = rMag*rMag*deltaU;
+      /* Eq. 5.38 of BB1 */
+      REAL8 deltaR = deltaT*D;	   
+	  if ( oldTortoise )
+		  csi = sqrt( deltaT * deltaR )/ w2; /* Eq. 28 of Pan et al. PRD 81, 084041 (2010) */
+	  else
+	      csi = 1.0;
+
+	  for( i = 0; i < 3; i++ )
+	  { 
+		  tmpP[i] = p.data[i] - (r.data[i]/rMag) * prT * (csi-1.)/csi;
+	  }
+	  memcpy( p.data, tmpP, sizeof(tmpP) );
+  }
+#endif
   //printf( "Hamiltonian = %e\n", XLALSimIMRSpinEOBHamiltonian( eobParams->eta, &r, &p, &sigmaKerr, &sigmaStar, dParams->params->seobCoeffs ) );
   REAL8 SpinEOBH = XLALSimIMRSpinEOBHamiltonian( eobParams->eta, &r, &p, &spin1norm, &spin2norm, &sigmaKerr, &sigmaStar, dParams->params->tortoise, dParams->params->seobCoeffs ) / eobParams->eta;
   
