@@ -130,7 +130,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
                INT4                      tortoise,  /**<< flag to state whether the momentum is the tortoise co-ord */
 	       SpinEOBHCoeffs *coeffs               /**<< Structure containing various coefficients */
                )
-{ int debugPK = 0;
+{ int debugPK = 1;
   /* Update the Hamiltonian coefficients, if spins are evolving */
   int UsePrec = 1;
   if ( UsePrec && coeffs->updateHCoeffs )
@@ -184,7 +184,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   /* Spin gauge parameters. (YP) simplified, since both are zero. */
   // static const double aa=0., bb=0.;
   if(debugPK){
-  printf( "In Hamiltonian:\n" );
+  printf( "In Hamiltonian: tortoise flag = %d\n", (int) tortoise );
   printf( "x = %.16e\t%.16e\t%.16e\n", x->data[0], x->data[1], x->data[2] );
   printf( "p = %.16e\t%.16e\t%.16e\n", p->data[0], p->data[1], p->data[2] );
   printf( "sStar = %.16e\t%.16e\t%.16e\n", sigmaStar->data[0], 
@@ -285,12 +285,23 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
   }
   if(debugPK)printf( "csi(miami) = %.16e\n", csi );
 
-  prT = p->data[0]*nx + p->data[1]*ny + p->data[2]*nz;
-  /* p->data is BL momentum vector; tmpP is tortoise momentum vector */ 
-  tmpP[0] = p->data[0] - nx * prT * (csi - 1.)/csi;
-  tmpP[1] = p->data[1] - ny * prT * (csi - 1.)/csi;
-  tmpP[2] = p->data[2] - nz * prT * (csi - 1.)/csi;
-
+  if ( tortoise != 2 )
+  {
+	  prT = p->data[0]*nx + p->data[1]*ny + p->data[2]*nz;
+      /* p->data is BL momentum vector; tmpP is tortoise momentum vector */ 
+      tmpP[0] = p->data[0] - nx * prT * (csi - 1.)/csi;
+      tmpP[1] = p->data[1] - ny * prT * (csi - 1.)/csi;
+      tmpP[2] = p->data[2] - nz * prT * (csi - 1.)/csi;
+  }
+  else
+  {
+	  prT = (p->data[0]*nx + p->data[1]*ny + p->data[2]*nz)*csi;
+      /* p->data is BL momentum vector; tmpP is tortoise momentum vector */ 
+      tmpP[0] = p->data[0];
+      tmpP[1] = p->data[1];
+      tmpP[2] = p->data[2];
+  }
+  
   pxir = (tmpP[0]*xi_x + tmpP[1]*xi_y + tmpP[2]*xi_z) * r;
   pvr  = (tmpP[0]*vx + tmpP[1]*vy + tmpP[2]*vz) * r;
   pn   = tmpP[0]*nx + tmpP[1]*ny + tmpP[2]*nz;
