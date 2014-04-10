@@ -350,8 +350,8 @@ static int XLALSpinHcapNumericalDerivative(
 				- (csi - 1)/csi * (rData[i]*rData[j]/rMag2);
 		
 		if( i==j ){ 
-			Tmatrix[i][j]++; Tmatrix[j][i]++; 
-			invTmatrix[i][j]++; invTmatrix[i][j]++; }
+			Tmatrix[i][j]++;  
+			invTmatrix[i][j]++;  }
 		
 	}
 
@@ -367,6 +367,12 @@ static int XLALSpinHcapNumericalDerivative(
 		*(csi - 1.)/rMag2 
 		+ rData[i]*rData[j]*rData[k]*(csi - 1.)/rMag2/rMag*(-2./rMag + dcsi);
 		}
+	
+  // Print out the T-matrix for comparison
+  if(debugPK){
+	  for( i = 0; i < 3; i++ )
+		printf("%le\t%le\t%le\n", Tmatrix[i][0], Tmatrix[i][1], Tmatrix[i][2]);
+	}
 	
   /* Now calculate derivatives w.r.t. each parameter */
   for ( i = 0; i < 12; i++ )
@@ -413,17 +419,17 @@ static int XLALSpinHcapNumericalDerivative(
 	REAL8 sscaling1 = (mass1+mass2)*(mass1+mass2)/(mass1*mass1);
 	REAL8 sscaling2 = (mass1+mass2)*(mass1+mass2)/(mass2*mass2);
 
-	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
+	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n\n",
         (double) values[0], (double) values[1], (double) values[2], 
         (double) values[3], (double) values[4], (double) values[5], 
         (double) sscaling1*values[6], (double) sscaling1*values[7], 
         (double) sscaling1*values[8], (double) sscaling2*values[9],
-        (double) sscaling2*values[10], (double) sscaling2*values[11],
+        (double) sscaling2*values[10], (double) sscaling2*values[11] );
+    printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t\n",
         (double) tmpDValues[0], (double) tmpDValues[1], (double) tmpDValues[2], 
         (double) tmpDValues[3], (double) tmpDValues[4], (double) tmpDValues[5], 
-        (double) tmpDValues[6], (double) tmpDValues[7], 
-        (double) tmpDValues[8], (double) tmpDValues[9], 
-        (double) tmpDValues[10], (double) tmpDValues[11]);
+        (double) tmpDValues[6], (double) tmpDValues[7], (double) tmpDValues[8], 
+        (double) tmpDValues[9], (double) tmpDValues[10], (double) tmpDValues[11]);
 
   /* Calculate the orbital angular momentum */
   Lx = values[1]*values[5] - values[2]*values[4];
@@ -627,7 +633,7 @@ static int XLALSpinHcapNumericalDerivative(
   printf( "\n" );
   */
 
-  if ( debugPK )
+  if ( debugPK || 1)
   {
 #if 0
     /* Print out all mass parameters */   
@@ -663,7 +669,7 @@ static int XLALSpinHcapNumericalDerivative(
 	printf("Hamiltonian = %12.12lf, Flux = %12.12lf, Omega = %12.12lf\n", H, flux, omega);
 #endif
 #if 1
-	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n",
+	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n\n",
         (double) values[0], (double) values[1], (double) values[2], 
         (double) values[3], (double) values[4], (double) values[5], 
         (double) sscaling1*values[6], (double) sscaling1*values[7], 
