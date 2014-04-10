@@ -130,7 +130,7 @@ static REAL8 XLALSimIMRSpinEOBHamiltonian(
                INT4                      tortoise,  /**<< flag to state whether the momentum is the tortoise co-ord */
 	       SpinEOBHCoeffs *coeffs               /**<< Structure containing various coefficients */
                )
-{ int debugPK = 1;
+{ int debugPK = 0;
   /* Update the Hamiltonian coefficients, if spins are evolving */
   int UsePrec = 1;
   if ( UsePrec && coeffs->updateHCoeffs )

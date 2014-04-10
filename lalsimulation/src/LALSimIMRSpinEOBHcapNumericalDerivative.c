@@ -335,8 +335,11 @@ static int XLALSpinHcapNumericalDerivative(
 	  { 
 		  tmpP[i] = pData[i] - (rData[i]/rMag) * prT * (csi-1.)/csi;
 	  }
-	  //memcpy( p.data, tmpP, sizeof(tmpP) );
-
+	  
+  if( debugPK ){
+	  for( i = 0; i < 3; i++ )
+		printf("%.12e\t%.12e\n", pData[i], tmpP[i]); }
+		
   /* Calculate the T-matrix, required to convert P from tortoise to 
    * non-tortoise coordinates, and/or vice-versa. This is given explicitly
    * in Eq. A3 of 0912.3466 */
@@ -416,16 +419,16 @@ static int XLALSpinHcapNumericalDerivative(
     }
   }
 
-	REAL8 sscaling1 = (mass1+mass2)*(mass1+mass2)/(mass1*mass1);
-	REAL8 sscaling2 = (mass1+mass2)*(mass1+mass2)/(mass2*mass2);
+  REAL8 sscaling1 = (mass1+mass2)*(mass1+mass2)/(mass1*mass1);
+  REAL8 sscaling2 = (mass1+mass2)*(mass1+mass2)/(mass2*mass2);
 
-	printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n\n",
+  printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\n\n",
         (double) values[0], (double) values[1], (double) values[2], 
         (double) values[3], (double) values[4], (double) values[5], 
         (double) sscaling1*values[6], (double) sscaling1*values[7], 
         (double) sscaling1*values[8], (double) sscaling2*values[9],
         (double) sscaling2*values[10], (double) sscaling2*values[11] );
-    printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t\n",
+  printf("%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t%.12e\t\n",
         (double) tmpDValues[0], (double) tmpDValues[1], (double) tmpDValues[2], 
         (double) tmpDValues[3], (double) tmpDValues[4], (double) tmpDValues[5], 
         (double) tmpDValues[6], (double) tmpDValues[7], (double) tmpDValues[8], 
@@ -773,8 +776,8 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
   REAL8 a;
   REAL8 m1 = eobParams->m1;
   REAL8 m2 = eobParams->m2;
-  REAL8 mT2 = (m1+m2)*(m1+m2);
-  REAL8 eta = m1*m2/mT2;
+  REAL8 UNUSED mT2 = (m1+m2)*(m1+m2);
+  REAL8 UNUSED eta = m1*m2/mT2;
 
   INT4 oldTortoise = dParams->params->tortoise;
   /* Use a temporary vector to avoid corrupting the main function */
@@ -831,7 +834,7 @@ static double GSLSpinHamiltonianWrapper( double x, void *params )
    * tortoise flag = 2, and convert the momenta being evolved, i.e. p*, 
    * to p and pass that as input */
    // TODO
-#if 1
+#if 0
   if ( dParams->varyParam < 3 )
   {
 	  /* set the tortoise flag to 2 */
